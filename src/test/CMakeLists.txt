@@ -9,6 +9,7 @@ add_files(
 
 	CommandlineTestSuite.cpp
 	ConfigManagerTestSuite.cpp
+	CsharpIndexerTestSuite.cpp
 	CxxIncludeProcessingTestSuite.cpp
 	CxxParserTestSuite.cpp
 	CxxTypeNameTestSuite.cpp

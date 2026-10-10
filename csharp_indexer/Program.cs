@@ -15,25 +15,44 @@ namespace SourcetrailCsharpIndexer
         const int NODE_SYMBOL = 1 << 0;
         const int NODE_TYPE = 1 << 1;
         const int NODE_BUILTIN_TYPE = 1 << 2;
+        const int NODE_MODULE = 1 << 3;
         const int NODE_NAMESPACE = 1 << 4;
+        const int NODE_PACKAGE = 1 << 5;
         const int NODE_STRUCT = 1 << 6;
         const int NODE_CLASS = 1 << 7;
         const int NODE_INTERFACE = 1 << 8;
+        const int NODE_ANNOTATION = 1 << 9;
+        const int NODE_GLOBAL_VARIABLE = 1 << 10;
         const int NODE_FIELD = 1 << 11;
         const int NODE_FUNCTION = 1 << 12;
         const int NODE_METHOD = 1 << 13;
         const int NODE_ENUM = 1 << 14;
         const int NODE_ENUM_CONSTANT = 1 << 15;
+        const int NODE_TYPEDEF = 1 << 16;
+        const int NODE_TYPE_PARAMETER = 1 << 17;
         const int NODE_FILE = 1 << 18;
+        const int NODE_MACRO = 1 << 19;
+        const int NODE_UNION = 1 << 20;
 
-        // Sourcetrail Reference Kinds (from ReferenceKind.h)
-        const int REFERENCE_TYPE_USAGE = 1;
-        const int REFERENCE_USAGE = 2;
-        const int REFERENCE_CALL = 3;
-        const int REFERENCE_INHERITANCE = 4;
-        const int REFERENCE_OVERRIDE = 5;
+        // Sourcetrail Edge Types (from Edge.h)
+        const int EDGE_UNDEFINED = 0;
+        const int EDGE_MEMBER = 1 << 0;                  // 1
+        const int EDGE_TYPE_USAGE = 1 << 1;              // 2
+        const int EDGE_USAGE = 1 << 2;                   // 4
+        const int EDGE_CALL = 1 << 3;                    // 8
+        const int EDGE_INHERITANCE = 1 << 4;             // 16
+        const int EDGE_OVERRIDE = 1 << 5;                // 32
+        const int EDGE_TYPE_ARGUMENT = 1 << 6;           // 64
+        const int EDGE_TEMPLATE_SPECIALIZATION = 1 << 7; // 128
+        const int EDGE_INCLUDE = 1 << 8;                 // 256
+        const int EDGE_IMPORT = 1 << 9;                  // 512
 
-        // Location Types
+        // Sourcetrail Definition Kinds (from DefinitionKind.h)
+        const int DEFINITION_NONE = 0;
+        const int DEFINITION_IMPLICIT = 1;
+        const int DEFINITION_EXPLICIT = 2;
+
+        // Location Types (from LocationType.h)
         const int LOCATION_TOKEN = 0;
         const int LOCATION_SCOPE = 1;
         const int LOCATION_QUALIFIER = 2;
@@ -51,7 +70,6 @@ namespace SourcetrailCsharpIndexer
 
             if (args[0] == "check-environment")
             {
-                // Verify csharp-ls and Roslyn are available
                 string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
                 string csharpLsPath = Path.Combine(userProfile, ".dotnet", "tools", "csharp-ls.exe");
                 bool hasCsharpLs = File.Exists(csharpLsPath);
@@ -173,7 +191,7 @@ namespace SourcetrailCsharpIndexer
                 cmd.ExecuteNonQuery();
             }
 
-            // Record File
+            // Record File Node: serialized name format is "/\tm<filePath>\ts\tp"
             int fileNodeId = nextElementId++;
             using (var cmd = connection.CreateCommand())
             {
@@ -181,7 +199,7 @@ namespace SourcetrailCsharpIndexer
                 cmd.CommandText = "INSERT INTO element(id) VALUES (@id); INSERT INTO node(id, type, serialized_name) VALUES (@id, @type, @name);";
                 cmd.Parameters.AddWithValue("@id", fileNodeId);
                 cmd.Parameters.AddWithValue("@type", NODE_FILE);
-                cmd.Parameters.AddWithValue("@name", "<" + sourceFilePath + ">");
+                cmd.Parameters.AddWithValue("@name", "/\tm" + sourceFilePath + "\ts\tp");
                 cmd.ExecuteNonQuery();
 
                 cmd.CommandText = "INSERT OR REPLACE INTO file(id, path, language, modification_time, indexed, complete, line_count) VALUES (@id, @path, 'csharp', @mod, 1, 1, @lines);";
@@ -194,10 +212,11 @@ namespace SourcetrailCsharpIndexer
             }
 
             var symbolMap = new Dictionary<string, int>();
+            var edgeSet = new HashSet<(int, int, int)>();
 
             string FormatSerializedName(string fullName, string postfix = "")
             {
-                if (fullName.StartsWith("<") && fullName.EndsWith(">"))
+                if (fullName.StartsWith("/\tm") || (fullName.StartsWith("<") && fullName.EndsWith(">")))
                     return fullName;
 
                 string[] parts = fullName.Split('.');
@@ -220,11 +239,21 @@ namespace SourcetrailCsharpIndexer
                 return sb.ToString();
             }
 
-            int RecordNode(string nameKey, int nodeType, int definitionKind = 1, string postfix = "")
+            int RecordNode(string nameKey, int nodeType, int definitionKind = DEFINITION_EXPLICIT, string postfix = "")
             {
                 string key = $"{nameKey}{postfix}";
                 if (symbolMap.TryGetValue(key, out int existingId))
+                {
+                    if (definitionKind == DEFINITION_EXPLICIT)
+                    {
+                        using var updateCmd = connection.CreateCommand();
+                        updateCmd.Transaction = transaction;
+                        updateCmd.CommandText = "UPDATE symbol SET definition_kind = 2 WHERE id = @id AND definition_kind < 2;";
+                        updateCmd.Parameters.AddWithValue("@id", existingId);
+                        updateCmd.ExecuteNonQuery();
+                    }
                     return existingId;
+                }
 
                 string serializedName = FormatSerializedName(nameKey, postfix);
                 int id = nextElementId++;
@@ -260,6 +289,14 @@ namespace SourcetrailCsharpIndexer
 
             int RecordEdge(int sourceId, int targetId, int edgeType)
             {
+                if (sourceId <= 0 || targetId <= 0 || sourceId == targetId)
+                    return 0;
+
+                var key = (sourceId, targetId, edgeType);
+                if (edgeSet.Contains(key))
+                    return 0;
+                edgeSet.Add(key);
+
                 int edgeId = nextElementId++;
                 using var cmd = connection.CreateCommand();
                 cmd.Transaction = transaction;
@@ -272,138 +309,227 @@ namespace SourcetrailCsharpIndexer
                 return edgeId;
             }
 
-            // AST Walker
-            void Walk(SyntaxNode node, string currentNamespace, string currentType)
+            // AST Walker threading parentSymbolId
+            void Walk(SyntaxNode node, string currentNamespace, string currentType, int parentSymbolId)
             {
-                string ns = currentNamespace;
-                string parentType = currentType;
-
                 if (node is BaseNamespaceDeclarationSyntax nsDecl)
                 {
                     string nsName = nsDecl.Name.ToString();
-                    string fullNs = string.IsNullOrEmpty(ns) ? nsName : $"{ns}.{nsName}";
-                    int nsId = RecordNode(fullNs, NODE_NAMESPACE);
+                    string fullNs = string.IsNullOrEmpty(currentNamespace) ? nsName : $"{currentNamespace}.{nsName}";
+
+                    string[] nsParts = nsName.Split('.');
+                    string builtNs = currentNamespace;
+                    int prevNsId = parentSymbolId;
+                    for (int i = 0; i < nsParts.Length; i++)
+                    {
+                        builtNs = string.IsNullOrEmpty(builtNs) ? nsParts[i] : $"{builtNs}.{nsParts[i]}";
+                        int curNsId = RecordNode(builtNs, NODE_NAMESPACE, DEFINITION_EXPLICIT);
+                        if (prevNsId > 0)
+                        {
+                            RecordEdge(prevNsId, curNsId, EDGE_MEMBER);
+                        }
+                        prevNsId = curNsId;
+                    }
+                    int nsId = prevNsId;
                     RecordLocation(nsId, nsDecl.Name.GetLocation().GetLineSpan(), LOCATION_TOKEN);
                     RecordLocation(nsId, nsDecl.GetLocation().GetLineSpan(), LOCATION_SCOPE);
-                    ns = fullNs;
+
+                    foreach (var child in nsDecl.ChildNodes())
+                    {
+                        Walk(child, fullNs, currentType, nsId);
+                    }
+                    return;
                 }
                 else if (node is TypeDeclarationSyntax typeDecl)
                 {
                     string typeName = typeDecl.Identifier.Text;
-                    string fullTypeName = string.IsNullOrEmpty(parentType)
-                        ? (string.IsNullOrEmpty(ns) ? typeName : $"{ns}.{typeName}")
-                        : $"{parentType}.{typeName}";
+                    string fullTypeName = string.IsNullOrEmpty(currentType)
+                        ? (string.IsNullOrEmpty(currentNamespace) ? typeName : $"{currentNamespace}.{typeName}")
+                        : $"{currentType}.{typeName}";
 
                     int nodeKind = NODE_CLASS;
                     if (typeDecl is InterfaceDeclarationSyntax) nodeKind = NODE_INTERFACE;
                     else if (typeDecl is StructDeclarationSyntax) nodeKind = NODE_STRUCT;
                     else if (typeDecl is RecordDeclarationSyntax) nodeKind = NODE_CLASS;
 
-                    int typeId = RecordNode(fullTypeName, nodeKind);
+                    int typeId = RecordNode(fullTypeName, nodeKind, DEFINITION_EXPLICIT);
                     RecordLocation(typeId, typeDecl.Identifier.GetLocation().GetLineSpan(), LOCATION_TOKEN);
                     RecordLocation(typeId, typeDecl.GetLocation().GetLineSpan(), LOCATION_SCOPE);
+
+                    if (parentSymbolId > 0)
+                    {
+                        RecordEdge(parentSymbolId, typeId, EDGE_MEMBER);
+                    }
 
                     if (typeDecl.BaseList != null)
                     {
                         foreach (var baseType in typeDecl.BaseList.Types)
                         {
                             string baseTypeName = baseType.Type.ToString();
-                            int targetBaseId = RecordNode(baseTypeName, NODE_TYPE, definitionKind: 0);
-                            int edgeId = RecordEdge(typeId, targetBaseId, REFERENCE_INHERITANCE);
-                            RecordLocation(edgeId, baseType.GetLocation().GetLineSpan(), LOCATION_TOKEN);
+                            int targetBaseId = RecordNode(baseTypeName, NODE_TYPE, DEFINITION_NONE);
+                            int edgeId = RecordEdge(typeId, targetBaseId, EDGE_INHERITANCE);
+                            if (edgeId > 0)
+                            {
+                                RecordLocation(edgeId, baseType.GetLocation().GetLineSpan(), LOCATION_TOKEN);
+                            }
                         }
                     }
 
-                    parentType = fullTypeName;
+                    foreach (var child in typeDecl.ChildNodes())
+                    {
+                        Walk(child, currentNamespace, fullTypeName, typeId);
+                    }
+                    return;
                 }
                 else if (node is EnumDeclarationSyntax enumDecl)
                 {
                     string enumName = enumDecl.Identifier.Text;
-                    string fullEnumName = string.IsNullOrEmpty(parentType)
-                        ? (string.IsNullOrEmpty(ns) ? enumName : $"{ns}.{enumName}")
-                        : $"{parentType}.{enumName}";
+                    string fullEnumName = string.IsNullOrEmpty(currentType)
+                        ? (string.IsNullOrEmpty(currentNamespace) ? enumName : $"{currentNamespace}.{enumName}")
+                        : $"{currentType}.{enumName}";
 
-                    int enumId = RecordNode(fullEnumName, NODE_ENUM);
+                    int enumId = RecordNode(fullEnumName, NODE_ENUM, DEFINITION_EXPLICIT);
                     RecordLocation(enumId, enumDecl.Identifier.GetLocation().GetLineSpan(), LOCATION_TOKEN);
                     RecordLocation(enumId, enumDecl.GetLocation().GetLineSpan(), LOCATION_SCOPE);
+
+                    if (parentSymbolId > 0)
+                    {
+                        RecordEdge(parentSymbolId, enumId, EDGE_MEMBER);
+                    }
 
                     foreach (var member in enumDecl.Members)
                     {
                         string memberName = $"{fullEnumName}.{member.Identifier.Text}";
-                        int memberId = RecordNode(memberName, NODE_ENUM_CONSTANT);
+                        int memberId = RecordNode(memberName, NODE_ENUM_CONSTANT, DEFINITION_EXPLICIT);
                         RecordLocation(memberId, member.Identifier.GetLocation().GetLineSpan(), LOCATION_TOKEN);
+                        RecordEdge(enumId, memberId, EDGE_MEMBER);
                     }
-
-                    parentType = fullEnumName;
+                    return;
                 }
                 else if (node is MethodDeclarationSyntax methodDecl)
                 {
-                    string methodName = $"{parentType}.{methodDecl.Identifier.Text}";
-                    int methodId = RecordNode(methodName, NODE_METHOD, 1, "()");
+                    string methodName = $"{currentType}.{methodDecl.Identifier.Text}";
+                    int methodId = RecordNode(methodName, NODE_METHOD, DEFINITION_EXPLICIT, "()");
                     RecordLocation(methodId, methodDecl.Identifier.GetLocation().GetLineSpan(), LOCATION_TOKEN);
                     RecordLocation(methodId, methodDecl.GetLocation().GetLineSpan(), LOCATION_SCOPE);
+
+                    if (parentSymbolId > 0)
+                    {
+                        RecordEdge(parentSymbolId, methodId, EDGE_MEMBER);
+                    }
 
                     string retType = methodDecl.ReturnType.ToString();
                     if (retType != "void")
                     {
-                        int retTypeId = RecordNode(retType, NODE_TYPE, definitionKind: 0);
-                        int edgeId = RecordEdge(methodId, retTypeId, REFERENCE_TYPE_USAGE);
-                        RecordLocation(edgeId, methodDecl.ReturnType.GetLocation().GetLineSpan(), LOCATION_TOKEN);
+                        int retTypeId = RecordNode(retType, NODE_TYPE, DEFINITION_NONE);
+                        int edgeId = RecordEdge(methodId, retTypeId, EDGE_TYPE_USAGE);
+                        if (edgeId > 0)
+                        {
+                            RecordLocation(edgeId, methodDecl.ReturnType.GetLocation().GetLineSpan(), LOCATION_TOKEN);
+                        }
                     }
+
+                    foreach (var child in methodDecl.ChildNodes())
+                    {
+                        Walk(child, currentNamespace, currentType, methodId);
+                    }
+                    return;
                 }
                 else if (node is ConstructorDeclarationSyntax ctorDecl)
                 {
-                    string ctorName = $"{parentType}.{ctorDecl.Identifier.Text}";
-                    int ctorId = RecordNode(ctorName, NODE_METHOD, 1, "()");
+                    string ctorName = $"{currentType}.{ctorDecl.Identifier.Text}";
+                    int ctorId = RecordNode(ctorName, NODE_METHOD, DEFINITION_EXPLICIT, "()");
                     RecordLocation(ctorId, ctorDecl.Identifier.GetLocation().GetLineSpan(), LOCATION_TOKEN);
                     RecordLocation(ctorId, ctorDecl.GetLocation().GetLineSpan(), LOCATION_SCOPE);
+
+                    if (parentSymbolId > 0)
+                    {
+                        RecordEdge(parentSymbolId, ctorId, EDGE_MEMBER);
+                    }
+
+                    foreach (var child in ctorDecl.ChildNodes())
+                    {
+                        Walk(child, currentNamespace, currentType, ctorId);
+                    }
+                    return;
                 }
                 else if (node is PropertyDeclarationSyntax propDecl)
                 {
-                    string propName = $"{parentType}.{propDecl.Identifier.Text}";
-                    int propId = RecordNode(propName, NODE_FIELD);
+                    string propName = $"{currentType}.{propDecl.Identifier.Text}";
+                    int propId = RecordNode(propName, NODE_FIELD, DEFINITION_EXPLICIT);
                     RecordLocation(propId, propDecl.Identifier.GetLocation().GetLineSpan(), LOCATION_TOKEN);
                     RecordLocation(propId, propDecl.GetLocation().GetLineSpan(), LOCATION_SCOPE);
 
+                    if (parentSymbolId > 0)
+                    {
+                        RecordEdge(parentSymbolId, propId, EDGE_MEMBER);
+                    }
+
                     string pType = propDecl.Type.ToString();
-                    int pTypeId = RecordNode(pType, NODE_TYPE, definitionKind: 0);
-                    int edgeId = RecordEdge(propId, pTypeId, REFERENCE_TYPE_USAGE);
-                    RecordLocation(edgeId, propDecl.Type.GetLocation().GetLineSpan(), LOCATION_TOKEN);
+                    int pTypeId = RecordNode(pType, NODE_TYPE, DEFINITION_NONE);
+                    int edgeId = RecordEdge(propId, pTypeId, EDGE_TYPE_USAGE);
+                    if (edgeId > 0)
+                    {
+                        RecordLocation(edgeId, propDecl.Type.GetLocation().GetLineSpan(), LOCATION_TOKEN);
+                    }
+
+                    foreach (var child in propDecl.ChildNodes())
+                    {
+                        Walk(child, currentNamespace, currentType, propId);
+                    }
+                    return;
                 }
                 else if (node is FieldDeclarationSyntax fieldDecl)
                 {
                     string fType = fieldDecl.Declaration.Type.ToString();
-                    int fTypeId = RecordNode(fType, NODE_TYPE, definitionKind: 0);
+                    int fTypeId = RecordNode(fType, NODE_TYPE, DEFINITION_NONE);
 
                     foreach (var variable in fieldDecl.Declaration.Variables)
                     {
-                        string fieldName = $"{parentType}.{variable.Identifier.Text}";
-                        int fieldId = RecordNode(fieldName, NODE_FIELD);
+                        string fieldName = $"{currentType}.{variable.Identifier.Text}";
+                        int fieldId = RecordNode(fieldName, NODE_FIELD, DEFINITION_EXPLICIT);
                         RecordLocation(fieldId, variable.Identifier.GetLocation().GetLineSpan(), LOCATION_TOKEN);
 
-                        int edgeId = RecordEdge(fieldId, fTypeId, REFERENCE_TYPE_USAGE);
-                        RecordLocation(edgeId, fieldDecl.Declaration.Type.GetLocation().GetLineSpan(), LOCATION_TOKEN);
+                        if (parentSymbolId > 0)
+                        {
+                            RecordEdge(parentSymbolId, fieldId, EDGE_MEMBER);
+                        }
+
+                        int edgeId = RecordEdge(fieldId, fTypeId, EDGE_TYPE_USAGE);
+                        if (edgeId > 0)
+                        {
+                            RecordLocation(edgeId, fieldDecl.Declaration.Type.GetLocation().GetLineSpan(), LOCATION_TOKEN);
+                        }
                     }
+                    return;
                 }
                 else if (node is InvocationExpressionSyntax invocation)
                 {
                     string calledName = invocation.Expression.ToString();
-                    if (!string.IsNullOrEmpty(parentType))
+                    if (parentSymbolId > 0)
                     {
-                        int callerId = RecordNode(parentType, NODE_METHOD, 1, "()");
-                        int calleeId = RecordNode(calledName, NODE_FUNCTION, 0, "()");
-                        int callEdgeId = RecordEdge(callerId, calleeId, REFERENCE_CALL);
-                        RecordLocation(callEdgeId, invocation.Expression.GetLocation().GetLineSpan(), LOCATION_TOKEN);
+                        int calleeId = RecordNode(calledName, NODE_FUNCTION, DEFINITION_NONE, "()");
+                        int callEdgeId = RecordEdge(parentSymbolId, calleeId, EDGE_CALL);
+                        if (callEdgeId > 0)
+                        {
+                            RecordLocation(callEdgeId, invocation.Expression.GetLocation().GetLineSpan(), LOCATION_TOKEN);
+                        }
                     }
+
+                    foreach (var child in invocation.ChildNodes())
+                    {
+                        Walk(child, currentNamespace, currentType, parentSymbolId);
+                    }
+                    return;
                 }
 
                 foreach (var child in node.ChildNodes())
                 {
-                    Walk(child, ns, parentType);
+                    Walk(child, currentNamespace, currentType, parentSymbolId);
                 }
             }
 
-            Walk(root, "", "");
+            Walk(root, "", "", 0);
 
             transaction.Commit();
         }
