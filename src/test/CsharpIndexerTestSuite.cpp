@@ -140,3 +140,4 @@ TEST_CASE("csharp indexer creates classes, methods, calls, and graph elements")
 	REQUIRE(fileNode != nullptr);
 	REQUIRE(fileNode->getChildCount() > 0);
 }
+
