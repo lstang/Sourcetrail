@@ -57,10 +57,29 @@ std::vector<std::shared_ptr<IndexerCommand>> SourceGroupPythonEmpty::getIndexerC
 	args.push_back(L"--database-file-path");
 	args.push_back(L"%{DATABASE_FILE_PATH}");
 
-	if (!m_settings->getEnvironmentPath().empty())
+	FilePath environmentPath = m_settings->getEnvironmentPathExpandedAndAbsolute();
+	if (environmentPath.empty())
+	{
+		const std::vector<std::wstring> candidatePaths = {
+			L"C:/ProgramData/miniconda3/envs/py38/python.exe",
+			L"C:/ProgramData/miniconda3/envs/py39/python.exe",
+			L"C:/ProgramData/miniconda3/envs/py38",
+			L"C:/ProgramData/miniconda3/envs/py39"
+		};
+		for (const std::wstring& candidate: candidatePaths)
+		{
+			if (FilePath(candidate).exists())
+			{
+				environmentPath = FilePath(candidate);
+				break;
+			}
+		}
+	}
+
+	if (!environmentPath.empty())
 	{
 		args.push_back(L"--environment-path");
-		args.push_back(m_settings->getEnvironmentPathExpandedAndAbsolute().wstr());
+		args.push_back(environmentPath.wstr());
 	}
 
 	if (ApplicationSettings::getInstance()->getVerboseIndexerLoggingEnabled())

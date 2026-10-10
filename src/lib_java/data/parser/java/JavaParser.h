@@ -13,21 +13,7 @@
 #include "logging.h"
 #include "types.h"
 
-struct JNIEnv_;
-typedef JNIEnv_ JNIEnv;
-
-class _jobject;
-typedef _jobject* jobject;
-
-#ifdef _WIN32
-typedef long jint;
-#else
-typedef int jint;
-#endif
-
-class _jstring;
-typedef _jstring* jstring;
-
+#include <jni.h>
 class FilePath;
 class TextAccess;
 

@@ -1,12 +1,10 @@
 #include "TextCodec.h"
 
-#include <QTextCodec>
-
-TextCodec::TextCodec(const std::string& name): m_name(name)
+TextCodec::TextCodec(const std::string& name)
+	: m_name(name)
+	, m_decoder(name.c_str())
+	, m_encoder(name.c_str())
 {
-	m_codec = QTextCodec::codecForName(m_name.c_str());
-	m_decoder = std::make_shared<QTextDecoder>(m_codec);
-	m_encoder = std::make_shared<QTextEncoder>(m_codec);
 }
 
 std::string TextCodec::getName() const
@@ -16,27 +14,25 @@ std::string TextCodec::getName() const
 
 bool TextCodec::isValid() const
 {
-	if (m_codec)
-	{
-		return true;
-	}
-	return false;
+	return m_decoder.isValid() && m_encoder.isValid();
 }
 
 std::wstring TextCodec::decode(const std::string& unicodeString) const
 {
-	if (m_decoder)
+	if (m_decoder.isValid())
 	{
-		return m_decoder->toUnicode(unicodeString.c_str()).toStdWString();
+		const QString decoded = m_decoder(QByteArrayView(unicodeString.data(), unicodeString.size()));
+		return decoded.toStdWString();
 	}
 	return QString::fromStdString(unicodeString).toStdWString();
 }
 
 std::string TextCodec::encode(const std::wstring& string) const
 {
-	if (m_encoder)
+	if (m_encoder.isValid())
 	{
-		return m_encoder->fromUnicode(QString::fromStdWString(string)).toStdString();
+		QByteArray encoded = m_encoder(QStringView(QString::fromStdWString(string)));
+		return std::string(encoded.constData(), encoded.size());
 	}
 	return QString::fromStdWString(string).toStdString();
 }

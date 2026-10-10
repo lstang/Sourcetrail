@@ -3,7 +3,7 @@
 #include <QAction>
 #include <QPainter>
 #include <QTextBlock>
-#include <QTextCodec>
+#include <QStringEncoder>
 #include <QWindow>
 
 #include "ApplicationSettings.h"
@@ -272,7 +272,7 @@ void QtCodeField::paintEvent(QPaintEvent* event)
 	QPlainTextEdit::paintEvent(event);
 }
 
-void QtCodeField::enterEvent(QEvent* event) {}
+void QtCodeField::enterEvent(QEnterEvent* event) {}
 
 void QtCodeField::leaveEvent(QEvent* event)
 {
@@ -868,8 +868,7 @@ void QtCodeField::createLineLengthCache()
 void QtCodeField::createMultibyteCharacterLocationCache(const QString& code)
 {
 	m_multibyteCharacterLocations.clear();
-	QTextCodec* codec = QTextCodec::codecForName(
-		ApplicationSettings::getInstance()->getTextEncoding().c_str());
+	QStringEncoder encoder(ApplicationSettings::getInstance()->getTextEncoding().c_str());
 
 	for (const QString& line: code.split(QStringLiteral("\n")))
 	{
@@ -878,7 +877,7 @@ void QtCodeField::createMultibyteCharacterLocationCache(const QString& code)
 		{
 			if (line[i].unicode() > 127)
 			{
-				int ss = codec->fromUnicode(line[i]).size();
+				int ss = encoder.isValid() ? static_cast<int>(QByteArray(encoder(line.sliced(i, 1))).size()) : 1;
 				columnsToOffsets.push_back(std::make_pair(i, ss));
 			}
 		}

@@ -6,7 +6,7 @@ QtHoverButton::QtHoverButton(QWidget* parent): QPushButton(QLatin1String(""), pa
 	setMouseTracking(true);
 }
 
-void QtHoverButton::enterEvent(QEvent* event)
+void QtHoverButton::enterEvent(QEnterEvent* event)
 {
 	if (isEnabled())
 	{

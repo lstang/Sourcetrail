@@ -56,13 +56,14 @@ else ()
 	set(PLATFORM_INCLUDE "includesLinux.h")
 endif ()
 
-set (BASH "")
-if (WIN32)
-	execute_process(COMMAND CMD /c where bash OUTPUT_VARIABLE BASH)
-	string(REGEX REPLACE "\n$" "" BASH "${BASH}")
-endif ()
-
-message ("bash: '${BASH}'")
+find_program(BASH NAMES bash.exe PATHS "C:/Program Files/Git/bin" "C:/Program Files/Git/usr/bin")
+if (NOT BASH)
+	find_program(BASH bash)
+endif()
+if (NOT BASH)
+	set(BASH "bash")
+endif()
+message("bash: '${BASH}'")
 
 
 # Project ----------------------------------------------------------------------
@@ -83,7 +84,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_C_STANDARD 11)
-
+add_compile_definitions(BOOST_PROCESS_VERSION=1 NOMINMAX)
 
 # Settings ---------------------------------------------------------------------
 
@@ -180,7 +181,9 @@ endif()
 # Boost ------------------------------------------------------------------------
 
 set(Boost_USE_MULTITHREAD ON)
-set(Boost_USE_STATIC_LIBS ON CACHE BOOL "Set to ON to force the use of the static libraries.")
+if (NOT DEFINED Boost_USE_STATIC_LIBS)
+	set(Boost_USE_STATIC_LIBS OFF CACHE BOOL "Set to ON to force the use of the static libraries.")
+endif()
 set(Boost_USE_STATIC_RUNTIME OFF)
 
 find_package(Boost 1.67 COMPONENTS system program_options filesystem date_time REQUIRED)
@@ -188,40 +191,25 @@ find_package(Boost 1.67 COMPONENTS system program_options filesystem date_time R
 
 # Qt ---------------------------------------------------------------------------
 
-set (QT_MIN_VERSION "5.12.0")
-set (QT_MIN_VERSION_HEX 0x051200)
-find_package(Qt5 ${QT_MIN_VERSION} COMPONENTS Widgets PrintSupport Network Svg REQUIRED)
+find_package(Qt6 REQUIRED COMPONENTS Widgets PrintSupport Network Svg)
 
-if (WIN32)
-	find_package(Qt5 ${QT_MIN_VERSION} COMPONENTS WinExtras REQUIRED)
-endif()
-
-if(Qt5Widgets_FOUND)
-	message(STATUS "Found Qt ${Qt5Widgets_VERSION_STRING}")
+if(Qt6Widgets_FOUND)
+	message(STATUS "Found Qt6 ${Qt6Widgets_VERSION}")
 
 	# FIX: Qt was built with -reduce-relocations
-	if (Qt5_POSITION_INDEPENDENT_CODE)
+	if (Qt6_POSITION_INDEPENDENT_CODE)
 		SET(CMAKE_POSITION_INDEPENDENT_CODE ON)
 	endif()
 
-	# The following define makes your compiler emit warnings if you use
-	# any feature of Qt which as been marked as deprecated (the exact warnings
-	# depend on your compiler). Please consult the documentation of the
-	# deprecated API in order to know how to port your code away from it.
 	add_definitions (-DQT_DEPRECATED_WARNINGS)
-
-	# You can also make your code fail to compile if you use deprecated APIs.
-	# In order to do so, uncomment the following line.
-	# You can also select to disable deprecated APIs only up to a certain version of Qt.
-	#DEFINES += QT_DISABLE_DEPRECATED_BEFORE=${QT_MIN_VERSION_HEX}    # disables all the APIs deprecated at or before the specified Qt version
-	add_definitions (-DQT_DISABLE_DEPRECATED_BEFORE=${QT_MIN_VERSION_HEX})
 endif()
 
 
 # Setup ---------------------------------------------------------------------------
 
 if (WIN32)
-	get_filename_component(QT_BINARY_DIR "${QT_MOC_EXECUTABLE}" PATH)
+	get_target_property(QT_QMAKE_LOCATION Qt6::qmake LOCATION)
+	get_filename_component(QT_BINARY_DIR "${QT_QMAKE_LOCATION}" PATH)
 	set(QT_PLUGINS_DIR "${QT_BINARY_DIR}/../plugins")
 
 	function(COPY_QT_BINARIES IS_DEBUG IS_APP)
@@ -248,30 +236,32 @@ if (WIN32)
 			file(GLOB MY_PUBLIC_HEADERS
 				"${CMAKE_SOURCE_DIR}/setup/dynamic_libraries/win${BITS}/app/${CONFIGURATION}/*"
 			)
+			list(FILTER MY_PUBLIC_HEADERS EXCLUDE REGEX "(msvcp140|vcruntime140)")
 			file(COPY ${MY_PUBLIC_HEADERS} DESTINATION "${CMAKE_BINARY_DIR}/${CONFIGURATION}/${TARGET}/")
 
 		endif()
 
-		configure_file("${QT_BINARY_DIR}/Qt5Core${SUFFIX}.dll" "${CMAKE_BINARY_DIR}/${CONFIGURATION}/${TARGET}/Qt5Core${SUFFIX}.dll" COPYONLY)
-		configure_file("${QT_BINARY_DIR}/Qt5Gui${SUFFIX}.dll" "${CMAKE_BINARY_DIR}/${CONFIGURATION}/${TARGET}/Qt5Gui${SUFFIX}.dll" COPYONLY)
-		configure_file("${QT_BINARY_DIR}/Qt5Network${SUFFIX}.dll" "${CMAKE_BINARY_DIR}/${CONFIGURATION}/${TARGET}/Qt5Network${SUFFIX}.dll" COPYONLY)
-		configure_file("${QT_BINARY_DIR}/Qt5Svg${SUFFIX}.dll" "${CMAKE_BINARY_DIR}/${CONFIGURATION}/${TARGET}/Qt5Svg${SUFFIX}.dll" COPYONLY)
-		configure_file("${QT_BINARY_DIR}/Qt5Widgets${SUFFIX}.dll" "${CMAKE_BINARY_DIR}/${CONFIGURATION}/${TARGET}/Qt5Widgets${SUFFIX}.dll" COPYONLY)
-		configure_file("${QT_BINARY_DIR}/Qt5WinExtras${SUFFIX}.dll" "${CMAKE_BINARY_DIR}/${CONFIGURATION}/${TARGET}/Qt5WinExtras${SUFFIX}.dll" COPYONLY)
+		foreach(QT_MOD Core Gui Network Svg Widgets)
+			if (EXISTS "${QT_BINARY_DIR}/Qt6${QT_MOD}${SUFFIX}.dll")
+				configure_file("${QT_BINARY_DIR}/Qt6${QT_MOD}${SUFFIX}.dll" "${CMAKE_BINARY_DIR}/${CONFIGURATION}/${TARGET}/Qt6${QT_MOD}${SUFFIX}.dll" COPYONLY)
+			endif()
+		endforeach()
 
-		configure_file("${QT_PLUGINS_DIR}/platforms/qwindows${SUFFIX}.dll" "${CMAKE_BINARY_DIR}/${CONFIGURATION}/${TARGET}/platforms/qwindows${SUFFIX}.dll" COPYONLY)
+		if (EXISTS "${QT_PLUGINS_DIR}/platforms/qwindows${SUFFIX}.dll")
+			configure_file("${QT_PLUGINS_DIR}/platforms/qwindows${SUFFIX}.dll" "${CMAKE_BINARY_DIR}/${CONFIGURATION}/${TARGET}/platforms/qwindows${SUFFIX}.dll" COPYONLY)
+		endif()
 
-		configure_file("${QT_PLUGINS_DIR}/styles/qwindowsvistastyle${SUFFIX}.dll" "${CMAKE_BINARY_DIR}/${CONFIGURATION}/${TARGET}/styles/qwindowsvistastyle${SUFFIX}.dll" COPYONLY)
+		foreach(STYLE_DLL qmodernwindowsstyle${SUFFIX}.dll qwindowsvistastyle${SUFFIX}.dll)
+			if (EXISTS "${QT_PLUGINS_DIR}/styles/${STYLE_DLL}")
+				configure_file("${QT_PLUGINS_DIR}/styles/${STYLE_DLL}" "${CMAKE_BINARY_DIR}/${CONFIGURATION}/${TARGET}/styles/${STYLE_DLL}" COPYONLY)
+			endif()
+		endforeach()
 
-		configure_file("${QT_PLUGINS_DIR}/imageformats/qgif${SUFFIX}.dll" "${CMAKE_BINARY_DIR}/${CONFIGURATION}/${TARGET}/imageformats/qgif${SUFFIX}.dll" COPYONLY)
-		configure_file("${QT_PLUGINS_DIR}/imageformats/qicns${SUFFIX}.dll" "${CMAKE_BINARY_DIR}/${CONFIGURATION}/${TARGET}/imageformats/qicns${SUFFIX}.dll" COPYONLY)
-		configure_file("${QT_PLUGINS_DIR}/imageformats/qico${SUFFIX}.dll" "${CMAKE_BINARY_DIR}/${CONFIGURATION}/${TARGET}/imageformats/qico${SUFFIX}.dll" COPYONLY)
-		configure_file("${QT_PLUGINS_DIR}/imageformats/qjpeg${SUFFIX}.dll" "${CMAKE_BINARY_DIR}/${CONFIGURATION}/${TARGET}/imageformats/qjpeg${SUFFIX}.dll" COPYONLY)
-		configure_file("${QT_PLUGINS_DIR}/imageformats/qsvg${SUFFIX}.dll" "${CMAKE_BINARY_DIR}/${CONFIGURATION}/${TARGET}/imageformats/qsvg${SUFFIX}.dll" COPYONLY)
-		configure_file("${QT_PLUGINS_DIR}/imageformats/qtga${SUFFIX}.dll" "${CMAKE_BINARY_DIR}/${CONFIGURATION}/${TARGET}/imageformats/qtga${SUFFIX}.dll" COPYONLY)
-		configure_file("${QT_PLUGINS_DIR}/imageformats/qtiff${SUFFIX}.dll" "${CMAKE_BINARY_DIR}/${CONFIGURATION}/${TARGET}/imageformats/qtiff${SUFFIX}.dll" COPYONLY)
-		configure_file("${QT_PLUGINS_DIR}/imageformats/qwbmp${SUFFIX}.dll" "${CMAKE_BINARY_DIR}/${CONFIGURATION}/${TARGET}/imageformats/qwbmp${SUFFIX}.dll" COPYONLY)
-		configure_file("${QT_PLUGINS_DIR}/imageformats/qwebp${SUFFIX}.dll" "${CMAKE_BINARY_DIR}/${CONFIGURATION}/${TARGET}/imageformats/qwebp${SUFFIX}.dll" COPYONLY)
+		file(GLOB IMAGEFORMAT_DLLS "${QT_PLUGINS_DIR}/imageformats/*${SUFFIX}.dll")
+		foreach(IMG_DLL ${IMAGEFORMAT_DLLS})
+			get_filename_component(IMG_NAME "${IMG_DLL}" NAME)
+			configure_file("${IMG_DLL}" "${CMAKE_BINARY_DIR}/${CONFIGURATION}/${TARGET}/imageformats/${IMG_NAME}" COPYONLY)
+		endforeach()
 	endfunction(COPY_QT_BINARIES)
 
 	COPY_QT_BINARIES(True True)
@@ -312,15 +302,11 @@ target_include_directories(${LIB_UTILITY_PROJECT_NAME} SYSTEM
 	PUBLIC ${Boost_INCLUDE_DIR}
 )
 
-target_link_libraries(${LIB_UTILITY_PROJECT_NAME} ${Boost_LIBRARIES} Qt5::Widgets Qt5::Network)
+target_link_libraries(${LIB_UTILITY_PROJECT_NAME} ${Boost_LIBRARIES} Qt6::Widgets Qt6::Network)
 
 if (UNIX AND NOT APPLE)
 	find_package(Threads REQUIRED)
 	target_link_libraries(${LIB_UTILITY_PROJECT_NAME} ${CMAKE_DL_LIBS} rt ${CMAKE_THREAD_LIBS_INIT})
-endif()
-
-if (WIN32)
-	target_link_libraries(${LIB_UTILITY_PROJECT_NAME} Qt5::WinExtras)
 endif()
 
 
@@ -540,11 +526,7 @@ add_custom_target(
 
 add_library(${LIB_GUI_PROJECT_NAME} ${LIB_GUI_FILES} ${CMAKE_BINARY_DIR}/src/lib_gui/productVersion.h)
 
-target_link_libraries(${LIB_GUI_PROJECT_NAME} ${LIB_UTILITY_PROJECT_NAME} ${LIB_PROJECT_NAME} Qt5::Widgets Qt5::Network Qt5::Svg)
-
-if (WIN32)
-	target_link_libraries(${LIB_GUI_PROJECT_NAME} Qt5::WinExtras)
-endif()
+target_link_libraries(${LIB_GUI_PROJECT_NAME} ${LIB_UTILITY_PROJECT_NAME} ${LIB_PROJECT_NAME} Qt6::Widgets Qt6::Network Qt6::Svg)
 
 # command for versioning script
 add_custom_command(
@@ -552,7 +534,6 @@ add_custom_command(
 	PRE_BUILD
 	COMMAND ${CMAKE_COMMAND} -DBINARY_DIR=${CMAKE_BINARY_DIR} -P ${CMAKE_SOURCE_DIR}/cmake/version.cmake
 	BYPRODUCTS ${CMAKE_BINARY_DIR}/src/lib_gui/productVersion.h
-	DEPENDS ${LIB_GUI_PROJECT_NAME}
 	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
 	COMMENT "check/update version number"
 )
@@ -741,9 +722,7 @@ target_include_directories(${APP_PROJECT_NAME} SYSTEM
 	"${EXTERNAL_C_INCLUDE_PATHS}"
 )
 
-# Use the Widgets module from Qt 5.
-qt5_use_modules(${APP_PROJECT_NAME} Widgets)
-qt5_use_modules(${APP_PROJECT_NAME} Network)
+target_link_libraries(${APP_PROJECT_NAME} Qt6::Widgets Qt6::Network)
 
 # add platform specific libraries
 if (APPLE)
@@ -763,22 +742,22 @@ if (APPLE)
 	set(MACOS_BINARY_NAME ${APP_PROJECT_NAME})
 	set(MACOS_INDEXER_BINARY_NAME ${APP_INDEXER_NAME})
 
-	get_property(QT_CORE_PATH TARGET ${Qt5Core_LIBRARIES} PROPERTY LOCATION)
+	get_property(QT_CORE_PATH TARGET Qt6::Core PROPERTY LOCATION)
 	get_filename_component(QT_CORE_PATH ${QT_CORE_PATH} REALPATH)
 
-	get_property(QT_GUI_PATH TARGET ${Qt5Gui_LIBRARIES} PROPERTY LOCATION)
+	get_property(QT_GUI_PATH TARGET Qt6::Gui PROPERTY LOCATION)
 	get_filename_component(QT_GUI_PATH ${QT_GUI_PATH} REALPATH)
 
-	get_property(QT_WIDGETS_PATH TARGET ${Qt5Widgets_LIBRARIES} PROPERTY LOCATION)
+	get_property(QT_WIDGETS_PATH TARGET Qt6::Widgets PROPERTY LOCATION)
 	get_filename_component(QT_WIDGETS_PATH ${QT_WIDGETS_PATH} REALPATH)
 
-	get_property(QT_PRINT_PATH TARGET ${Qt5PrintSupport_LIBRARIES} PROPERTY LOCATION)
+	get_property(QT_PRINT_PATH TARGET Qt6::PrintSupport PROPERTY LOCATION)
 	get_filename_component(QT_PRINT_PATH ${QT_PRINT_PATH} REALPATH)
 
-	get_property(QT_NETWORK_PATH TARGET ${Qt5Network_LIBRARIES} PROPERTY LOCATION)
+	get_property(QT_NETWORK_PATH TARGET Qt6::Network PROPERTY LOCATION)
 	get_filename_component(QT_NETWORK_PATH ${QT_NETWORK_PATH} REALPATH)
 
-	get_property(QT_SVG_PATH TARGET ${Qt5Svg_LIBRARIES} PROPERTY LOCATION)
+	get_property(QT_SVG_PATH TARGET Qt6::Svg PROPERTY LOCATION)
 	get_filename_component(QT_SVG_PATH ${QT_SVG_PATH} REALPATH)
 
 	list(APPEND MACOS_QT_FRAMEWORKS ${QT_CORE_PATH} ${QT_GUI_PATH} ${QT_WIDGETS_PATH} ${QT_PRINT_PATH} ${QT_NETWORK_PATH} ${QT_SVG_PATH})
@@ -786,7 +765,7 @@ if (APPLE)
 
 	set(MACOS_BOOST_DIR "${Boost_INCLUDE_DIR}")
 	STRING(REGEX REPLACE "/lib/cmake/clang" "" MACOS_CLANG_DIR "${Clang_DIR}")
-	STRING(REGEX REPLACE "/lib/cmake/Qt5" "" MACOS_QT_DIR "${Qt5_DIR}")
+	STRING(REGEX REPLACE "/lib/cmake/Qt6" "" MACOS_QT_DIR "${Qt6_DIR}")
 
 	configure_file(
 		${PROJECT_SOURCE_DIR}/setup/macOS/bundle_install.sh.in

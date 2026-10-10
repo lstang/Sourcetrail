@@ -5,7 +5,7 @@
 #include <QFontComboBox>
 #include <QLabel>
 #include <QLineEdit>
-#include <QTextCodec>
+#include <QStringConverter>
 #include <QTimer>
 
 #include "ApplicationSettings.h"
@@ -84,9 +84,9 @@ void QtProjectWizardContentPreferences::populate(QGridLayout* layout, int& row)
 
 	// text encoding
 	m_textEncoding = addComboBox(QStringLiteral("Text Encoding"), QLatin1String(""), layout, row);
-	for (int mib: QTextCodec::availableMibs())
+	for (const QString& codec: QStringConverter::availableCodecs())
 	{
-		m_textEncoding->addItem(QTextCodec::codecForMib(mib)->name());
+		m_textEncoding->addItem(codec);
 	}
 
 	// color scheme

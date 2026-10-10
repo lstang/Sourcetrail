@@ -2,6 +2,7 @@
 
 #include <QFileDialog>
 #include <QListView>
+#include <QRegularExpression>
 #include <QTreeView>
 
 #include "ApplicationSettings.h"
@@ -80,7 +81,7 @@ QString QtFileDialog::showSaveFileDialog(
 		dialog.setWindowModality(Qt::WindowModal);
 	}
 
-	QRegExp filter_regex(QStringLiteral("(?:^\\*\\.(?!.*\\()|\\(\\*\\.)(\\w+)"));
+	QRegularExpression filter_regex(QStringLiteral("(?:^\\*\\.(?!.*\\()|\\(\\*\\.)(\\w+)"));
 	QStringList filters = filter.split(QStringLiteral(";;"));
 
 	if (!filters.isEmpty())
@@ -97,9 +98,10 @@ QString QtFileDialog::showSaveFileDialog(
 
 		if (info.suffix().isEmpty() && !dialog.selectedNameFilter().isEmpty())
 		{
-			if (filter_regex.indexIn(dialog.selectedNameFilter()) != -1)
+			QRegularExpressionMatch match = filter_regex.match(dialog.selectedNameFilter());
+			if (match.hasMatch())
 			{
-				QString extension = filter_regex.cap(1);
+				QString extension = match.captured(1);
 				file_name += QStringLiteral(".") + extension;
 			}
 		}

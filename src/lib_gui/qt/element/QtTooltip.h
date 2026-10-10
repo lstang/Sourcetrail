@@ -25,7 +25,7 @@ public slots:
 
 protected:
 	virtual void leaveEvent(QEvent* event);
-	virtual void enterEvent(QEvent* event);
+	virtual void enterEvent(QEnterEvent* event);
 
 private:
 	void addTitle(const QString& title, int count, const QString& countText);

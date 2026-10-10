@@ -1,6 +1,7 @@
 #ifndef QT_HIGHLIGHTER_H
 #define QT_HIGHLIGHTER_H
 
+#include <QRegularExpression>
 #include <QTextCharFormat>
 
 class QTextBlock;
@@ -44,10 +45,10 @@ private:
 	{
 		HighlightingRule();
 		HighlightingRule(
-			HighlightType type, const QRegExp& regExp, bool priority, bool multiLine = false);
+			HighlightType type, const QRegularExpression& regExp, bool priority, bool multiLine = false);
 
 		HighlightType type = HighlightType::TEXT;
-		QRegExp pattern;
+		QRegularExpression pattern;
 		bool priority = false;
 		bool multiLine = false;
 	};

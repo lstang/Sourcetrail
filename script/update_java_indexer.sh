@@ -44,9 +44,17 @@ cd java_indexer
 # exit when any command fails
 set -e 
 
-echo -e $INFO "cleaning and building java_indexer.jar"
-mvn clean package
-
+if command -v mvn &> /dev/null; then
+	echo -e $INFO "cleaning and building java_indexer.jar with maven"
+	mvn clean package
+elif [ -f target/java-indexer-1.0.jar ]; then
+	echo -e $INFO "using prebuilt target/java-indexer-1.0.jar"
+else
+	echo -e $INFO "building java_indexer.jar with javac"
+	mkdir -p target/classes
+	javac -cp "lib/*" -d target/classes $(find src -name "*.java")
+	jar cf target/java-indexer-1.0.jar -C target/classes .
+fi
 cd ../
 
 echo -e $INFO "copy jars"

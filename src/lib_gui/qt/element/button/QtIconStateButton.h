@@ -36,7 +36,7 @@ signals:
 
 protected:
 	void changeEvent(QEvent* event);
-	void enterEvent(QEvent* event);
+	void enterEvent(QEnterEvent* event);
 	void leaveEvent(QEvent* event);
 
 private:

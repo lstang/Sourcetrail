@@ -25,7 +25,7 @@ std::function<Ret(Args...)> loadFunctionFromLibrary(
 {
 #ifdef _WIN32
 	QString libraryPathString = QDir::toNativeSeparators(QString::fromStdWString(libraryPath.wstr()));
-	HINSTANCE handle = LoadLibrary(libraryPathString.toStdString().c_str());
+	HINSTANCE handle = LoadLibraryW(libraryPath.wstr().c_str());
 	if (handle == nullptr)
 	{
 		DWORD errorCode = GetLastError();

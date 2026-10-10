@@ -135,7 +135,7 @@ void QtTooltip::leaveEvent(QEvent* event)
 	QTimer::singleShot(500, this, SLOT(hide()));
 }
 
-void QtTooltip::enterEvent(QEvent* event)
+void QtTooltip::enterEvent(QEnterEvent* event)
 {
 	m_isHovered = true;
 }

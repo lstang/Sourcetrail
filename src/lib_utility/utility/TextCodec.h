@@ -4,9 +4,9 @@
 #include <memory>
 #include <string>
 
-class QTextCodec;
-class QTextDecoder;
-class QTextEncoder;
+#include <QStringConverter>
+#include <QStringDecoder>
+#include <QStringEncoder>
 
 class TextCodec
 {
@@ -22,9 +22,8 @@ public:
 
 private:
 	const std::string m_name;
-	QTextCodec* m_codec;
-	std::shared_ptr<QTextDecoder> m_decoder;
-	std::shared_ptr<QTextEncoder> m_encoder;
+	mutable QStringDecoder m_decoder;
+	mutable QStringEncoder m_encoder;
 };
 
 #endif	  // TEXT_CODEC_H

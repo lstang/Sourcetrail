@@ -3,7 +3,7 @@
 
 class FilePath;
 class QString;
-class QStringList;
+#include <QStringList>
 class QWidget;
 
 class QtFileDialog

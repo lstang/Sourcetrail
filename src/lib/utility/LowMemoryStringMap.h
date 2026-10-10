@@ -1,6 +1,7 @@
 #ifndef LOW_MEMORY_STRING_MAP_H
 #define LOW_MEMORY_STRING_MAP_H
 
+#include <algorithm>
 #include <cstring>
 #include <iostream>
 #include <map>

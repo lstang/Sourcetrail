@@ -15,7 +15,7 @@ public:
 	void setColor(QColor color);
 
 protected:
-	void enterEvent(QEvent* event);
+	void enterEvent(QEnterEvent* event);
 	void leaveEvent(QEvent* event);
 
 private:
