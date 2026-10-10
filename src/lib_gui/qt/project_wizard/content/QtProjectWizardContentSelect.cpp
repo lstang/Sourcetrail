@@ -71,8 +71,8 @@ void QtProjectWizardContentSelect::populate(QGridLayout* layout, int& row)
 	sourceGroupInfos[LANGUAGE_PYTHON].push_back(SourceGroupInfo(SOURCE_GROUP_PYTHON_EMPTY));
 #endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
 	sourceGroupInfos[LANGUAGE_CSHARP].push_back(SourceGroupInfo(SOURCE_GROUP_CSHARP_EMPTY));
+	sourceGroupInfos[LANGUAGE_TREE_SITTER].push_back(SourceGroupInfo(SOURCE_GROUP_TREE_SITTER));
 	sourceGroupInfos[LANGUAGE_CUSTOM].push_back(SourceGroupInfo(SOURCE_GROUP_CUSTOM_COMMAND));
-
 	// define which icons should be used for which kind of source group
 #if BUILD_CXX_LANGUAGE_PACKAGE
 	m_sourceGroupTypeIconName[SOURCE_GROUP_C_EMPTY] = L"empty_icon";
@@ -90,8 +90,8 @@ void QtProjectWizardContentSelect::populate(QGridLayout* layout, int& row)
 	m_sourceGroupTypeIconName[SOURCE_GROUP_PYTHON_EMPTY] = L"empty_icon";
 #endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
 	m_sourceGroupTypeIconName[SOURCE_GROUP_CSHARP_EMPTY] = L"empty_icon";
+	m_sourceGroupTypeIconName[SOURCE_GROUP_TREE_SITTER] = L"empty_icon";
 	m_sourceGroupTypeIconName[SOURCE_GROUP_CUSTOM_COMMAND] = L"empty_icon";
-
 	// define descriptions for each kind of Source Group
 #if BUILD_CXX_LANGUAGE_PACKAGE
 	m_sourceGroupTypeDescriptions[SOURCE_GROUP_C_EMPTY] =
@@ -136,8 +136,10 @@ void QtProjectWizardContentSelect::populate(QGridLayout* layout, int& row)
 		"<p>Create a new Source Group by defining which C# source files will be indexed. This Source "
 		"Group type uses the <a href=\"https://github.com/razzmatazz/csharp-language-server\">csharp-ls</a> "
 		"(Roslyn Language Server) backend.</p>";
+	m_sourceGroupTypeDescriptions[SOURCE_GROUP_TREE_SITTER] =
+		"<p>Create a new Source Group by defining which source files will be indexed using <b>Tree-sitter</b>. "
+		"Supports Rust, Python, C, C++, JavaScript, Go, C#, Java, and more.</p>";
 	m_sourceGroupTypeDescriptions[SOURCE_GROUP_CUSTOM_COMMAND] =
-		"Create a new Source Group executing a custom command on each source file. "
 		"This Source Group type can be used on <a "
 		"href=\"https://github.com/CoatiSoftware/SourcetrailDB\">SourcetrailDB</a> binaries that "
 		"add "

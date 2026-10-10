@@ -46,6 +46,7 @@ set(LIB_CXX_PROJECT_NAME "${PROJECT_NAME}_lib_cxx")
 set(LIB_JAVA_PROJECT_NAME "${PROJECT_NAME}_lib_java")
 set(LIB_PYTHON_PROJECT_NAME "${PROJECT_NAME}_lib_python")
 set(LIB_CSHARP_PROJECT_NAME "${PROJECT_NAME}_lib_csharp")
+set(LIB_TREE_SITTER_PROJECT_NAME "${PROJECT_NAME}_lib_tree_sitter")
 set(LIB_PROJECT_NAME "${PROJECT_NAME}_lib")
 set(TEST_PROJECT_NAME "${PROJECT_NAME}_test")
 
@@ -293,6 +294,7 @@ add_subdirectory(src/lib_gui)
 add_subdirectory(src/lib_java)
 add_subdirectory(src/lib_python)
 add_subdirectory(src/lib_csharp)
+add_subdirectory(src/lib_tree_sitter)
 add_subdirectory(src/lib_utility)
 add_subdirectory(src/test)
 
@@ -540,6 +542,24 @@ set_property(
 target_link_libraries(${LIB_CSHARP_PROJECT_NAME} ${LIB_UTILITY_PROJECT_NAME} ${LIB_PROJECT_NAME})
 
 
+# Lib Tree Sitter --------------------------------------------------------------
+
+add_library(${LIB_TREE_SITTER_PROJECT_NAME} ${LIB_TREE_SITTER_FILES})
+
+create_source_groups(${LIB_TREE_SITTER_FILES})
+
+set_property(
+	TARGET ${LIB_TREE_SITTER_PROJECT_NAME}
+	PROPERTY INCLUDE_DIRECTORIES
+		"${LIB_TREE_SITTER_INCLUDE_PATHS}"
+		"${LIB_UTILITY_INCLUDE_PATHS}"
+		"${LIB_INCLUDE_PATHS}"
+		"${CMAKE_BINARY_DIR}/src/lib"
+)
+
+target_link_libraries(${LIB_TREE_SITTER_PROJECT_NAME} ${LIB_UTILITY_PROJECT_NAME} ${LIB_PROJECT_NAME})
+
+
 # Lib Gui ----------------------------------------------------------------------
 
 # Find includes in corresponding build directories
@@ -582,6 +602,7 @@ set_property(
 		$<$<BOOL:${BUILD_JAVA_LANGUAGE_PACKAGE}>:${LIB_JAVA_INCLUDE_PATHS}>
 		$<$<BOOL:${BUILD_PYTHON_LANGUAGE_PACKAGE}>:${LIB_PYTHON_INCLUDE_PATHS}>
 		"${LIB_CSHARP_INCLUDE_PATHS}"
+		"${LIB_TREE_SITTER_INCLUDE_PATHS}"
 )
 
 # include external header without warnings
@@ -654,6 +675,7 @@ target_link_libraries(
 	$<$<BOOL:${BUILD_JAVA_LANGUAGE_PACKAGE}>:${LIB_JAVA_PROJECT_NAME}>
 		$<$<BOOL:${BUILD_PYTHON_LANGUAGE_PACKAGE}>:${LIB_PYTHON_PROJECT_NAME}>
 		${LIB_CSHARP_PROJECT_NAME}
+		${LIB_TREE_SITTER_PROJECT_NAME}
 		${LIB_PROJECT_NAME}
 )
 
@@ -675,6 +697,7 @@ set_property(
 		$<$<BOOL:${BUILD_JAVA_LANGUAGE_PACKAGE}>:${LIB_JAVA_INCLUDE_PATHS}>
 		$<$<BOOL:${BUILD_PYTHON_LANGUAGE_PACKAGE}>:${LIB_PYTHON_INCLUDE_PATHS}>
 		"${LIB_CSHARP_INCLUDE_PATHS}"
+		"${LIB_TREE_SITTER_INCLUDE_PATHS}"
 )
 
 
@@ -732,6 +755,7 @@ target_link_libraries(
 	$<$<BOOL:${BUILD_JAVA_LANGUAGE_PACKAGE}>:${LIB_JAVA_PROJECT_NAME}>
 		$<$<BOOL:${BUILD_PYTHON_LANGUAGE_PACKAGE}>:${LIB_PYTHON_PROJECT_NAME}>
 		${LIB_CSHARP_PROJECT_NAME}
+		${LIB_TREE_SITTER_PROJECT_NAME}
 		${LIB_PROJECT_NAME}
 )
 
@@ -748,6 +772,7 @@ set_property(
 		$<$<BOOL:${BUILD_JAVA_LANGUAGE_PACKAGE}>:${LIB_JAVA_INCLUDE_PATHS}>
 		$<$<BOOL:${BUILD_PYTHON_LANGUAGE_PACKAGE}>:${LIB_PYTHON_INCLUDE_PATHS}>
 		"${LIB_CSHARP_INCLUDE_PATHS}"
+		"${LIB_TREE_SITTER_INCLUDE_PATHS}"
 )
 
 target_include_directories(${APP_PROJECT_NAME} SYSTEM
@@ -838,6 +863,7 @@ target_link_libraries(
 	$<$<BOOL:${BUILD_JAVA_LANGUAGE_PACKAGE}>:${LIB_JAVA_PROJECT_NAME}>
 		$<$<BOOL:${BUILD_PYTHON_LANGUAGE_PACKAGE}>:${LIB_PYTHON_PROJECT_NAME}>
 		${LIB_CSHARP_PROJECT_NAME}
+		${LIB_TREE_SITTER_PROJECT_NAME}
 		${LIB_PROJECT_NAME}
 		${LIB_GUI_PROJECT_NAME}
 		$<$<BOOL:${BUILD_CXX_LANGUAGE_PACKAGE}>:${LIB_CXX_PROJECT_NAME}>
@@ -861,6 +887,7 @@ set_property(
 		$<$<BOOL:${BUILD_JAVA_LANGUAGE_PACKAGE}>:${LIB_JAVA_INCLUDE_PATHS}>
 		$<$<BOOL:${BUILD_PYTHON_LANGUAGE_PACKAGE}>:${LIB_PYTHON_INCLUDE_PATHS}>
 		"${LIB_CSHARP_INCLUDE_PATHS}"
+		"${LIB_TREE_SITTER_INCLUDE_PATHS}"
 )
 
 if (WIN32)

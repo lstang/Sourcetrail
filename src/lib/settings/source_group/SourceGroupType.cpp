@@ -30,6 +30,8 @@ std::string sourceGroupTypeToString(SourceGroupType v)
 #endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
 	case SOURCE_GROUP_CSHARP_EMPTY:
 		return "C# Source Group";
+	case SOURCE_GROUP_TREE_SITTER:
+		return "Tree-sitter Source Group";
 	case SOURCE_GROUP_CUSTOM_COMMAND:
 	case SOURCE_GROUP_UNKNOWN:
 		break;
@@ -67,6 +69,8 @@ std::string sourceGroupTypeToProjectSetupString(SourceGroupType v)
 #endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
 	case SOURCE_GROUP_CSHARP_EMPTY:
 		return "Empty C# Source Group";
+	case SOURCE_GROUP_TREE_SITTER:
+		return "Tree-sitter Source Group";
 	case SOURCE_GROUP_CUSTOM_COMMAND:
 	case SOURCE_GROUP_UNKNOWN:
 		break;
@@ -121,6 +125,10 @@ SourceGroupType stringToSourceGroupType(const std::string& v)
 	if (v == sourceGroupTypeToString(SOURCE_GROUP_CSHARP_EMPTY) || v == sourceGroupTypeToProjectSetupString(SOURCE_GROUP_CSHARP_EMPTY))
 	{
 		return SOURCE_GROUP_CSHARP_EMPTY;
+	}
+	if (v == sourceGroupTypeToString(SOURCE_GROUP_TREE_SITTER) || v == "tree-sitter" || v == "tree_sitter" || v == "Tree-sitter" || v == "Empty Tree-sitter Source Group")
+	{
+		return SOURCE_GROUP_TREE_SITTER;
 	}
 	if (v == sourceGroupTypeToString(SOURCE_GROUP_CUSTOM_COMMAND))
 	{

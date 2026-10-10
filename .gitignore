@@ -8,6 +8,7 @@ build-*
 /bin/app/data/projects/ignored/
 /bin/app/data/python/
 /bin/app/data/csharp/
+/bin/app/data/tree_sitter/
 /bin/app/user/log/
 /bin/app/user/ApplicationSettings.xml
 /bin/app/user/window_settings.ini
@@ -21,6 +22,7 @@ build-*
 /bin/test/data/SourceGroupTestSuite/java_maven/input/sourcetrail_dependencies
 
 /java_indexer/target/
+/tree_sitter_indexer/target/
 
 /setup/Linux/lib/
 

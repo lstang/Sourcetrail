@@ -694,4 +694,6 @@ add_files(
 
 	settings/source_group/component/csharp/SourceGroupSettingsWithSourceExtensionsCsharp.h
 	settings/source_group/type/SourceGroupSettingsCsharpEmpty.h
+	settings/source_group/component/tree_sitter/SourceGroupSettingsWithSourceExtensionsTreeSitter.h
+	settings/source_group/type/SourceGroupSettingsTreeSitter.h
 )

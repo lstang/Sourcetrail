@@ -20,6 +20,8 @@ std::string languageTypeToString(LanguageType t)
 #endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
 	case LANGUAGE_CSHARP:
 		return "C#";
+	case LANGUAGE_TREE_SITTER:
+		return "Tree-sitter";
 	case LANGUAGE_CUSTOM:
 	case LANGUAGE_UNKNOWN:
 		break;
@@ -54,6 +56,10 @@ LanguageType stringToLanguageType(std::string s)
 	if (s == languageTypeToString(LANGUAGE_CSHARP) || s == "csharp" || s == "CSharp")
 	{
 		return LANGUAGE_CSHARP;
+	}
+	if (s == languageTypeToString(LANGUAGE_TREE_SITTER) || s == "tree-sitter" || s == "tree_sitter" || s == "Tree-sitter")
+	{
+		return LANGUAGE_TREE_SITTER;
 	}
 	if (s == languageTypeToString(LANGUAGE_CUSTOM))
 	{
@@ -92,6 +98,8 @@ LanguageType getLanguageTypeForSourceGroupType(SourceGroupType t)
 #endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
 	case SOURCE_GROUP_CSHARP_EMPTY:
 		return LANGUAGE_CSHARP;
+	case SOURCE_GROUP_TREE_SITTER:
+		return LANGUAGE_TREE_SITTER;
 	case SOURCE_GROUP_CUSTOM_COMMAND:
 	default:
 		break;

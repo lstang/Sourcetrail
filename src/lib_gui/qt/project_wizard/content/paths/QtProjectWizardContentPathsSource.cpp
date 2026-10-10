@@ -26,7 +26,8 @@
 #endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
 #include "SourceGroupCsharpEmpty.h"
 #include "SourceGroupSettingsCsharpEmpty.h"
-
+#include "SourceGroupTreeSitter.h"
+#include "SourceGroupSettingsTreeSitter.h"
 QtProjectWizardContentPathsSource::QtProjectWizardContentPathsSource(
 	std::shared_ptr<SourceGroupSettings> settings, QtProjectWizardWindow* window)
 	: QtProjectWizardContentPaths(
@@ -122,6 +123,11 @@ std::vector<FilePath> QtProjectWizardContentPathsSource::getFilePaths() const
 			std::dynamic_pointer_cast<SourceGroupSettingsCsharpEmpty>(m_settings))
 	{
 		allSourceFilePaths = SourceGroupCsharpEmpty(settings).getAllSourceFilePaths();
+	}
+	if (std::shared_ptr<SourceGroupSettingsTreeSitter> settings =
+			std::dynamic_pointer_cast<SourceGroupSettingsTreeSitter>(m_settings))
+	{
+		allSourceFilePaths = SourceGroupTreeSitter(settings).getAllSourceFilePaths();
 	}
 	if (std::shared_ptr<SourceGroupSettingsCustomCommand> settings =
 			std::dynamic_pointer_cast<SourceGroupSettingsCustomCommand>(m_settings))

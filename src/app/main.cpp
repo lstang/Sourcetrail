@@ -46,7 +46,7 @@
 #	include "SourceGroupFactoryModulePython.h"
 #endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
 #include "SourceGroupFactoryModuleCsharp.h"
-
+#include "SourceGroupFactoryModuleTreeSitter.h"
 void signalHandler(int signum)
 {
 	std::cout << "interrupt indexing" << std::endl;
@@ -83,7 +83,7 @@ void addLanguagePackages()
 	SourceGroupFactory::getInstance()->addModule(std::make_shared<SourceGroupFactoryModulePython>());
 #endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
 	SourceGroupFactory::getInstance()->addModule(std::make_shared<SourceGroupFactoryModuleCsharp>());
-
+	SourceGroupFactory::getInstance()->addModule(std::make_shared<SourceGroupFactoryModuleTreeSitter>());
 #if BUILD_CXX_LANGUAGE_PACKAGE
 	LanguagePackageManager::getInstance()->addPackage(std::make_shared<LanguagePackageCxx>());
 #endif	  // BUILD_CXX_LANGUAGE_PACKAGE

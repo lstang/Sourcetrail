@@ -1,0 +1,97 @@
+#include "SourceGroupTreeSitter.h"
+
+#include "ApplicationSettings.h"
+#include "FileManager.h"
+#include "IndexerCommandCustom.h"
+#include "ProjectSettings.h"
+#include "RefreshInfo.h"
+#include "ResourcePaths.h"
+#include "SourceGroupSettingsTreeSitter.h"
+#include "SqliteIndexStorage.h"
+#include "utility.h"
+
+SourceGroupTreeSitter::SourceGroupTreeSitter(std::shared_ptr<SourceGroupSettingsTreeSitter> settings)
+	: m_settings(settings)
+{
+}
+
+bool SourceGroupTreeSitter::allowsPartialClearing() const
+{
+	return false;
+}
+
+bool SourceGroupTreeSitter::allowsShallowIndexing() const
+{
+	return true;
+}
+
+std::set<FilePath> SourceGroupTreeSitter::filterToContainedFilePaths(
+	const std::set<FilePath>& filePaths) const
+{
+	return SourceGroup::filterToContainedFilePaths(
+		filePaths,
+		std::set<FilePath>(),
+		utility::toSet(m_settings->getSourcePathsExpandedAndAbsolute()),
+		m_settings->getExcludeFiltersExpandedAndAbsolute());
+}
+
+std::set<FilePath> SourceGroupTreeSitter::getAllSourceFilePaths() const
+{
+	FileManager fileManager;
+	fileManager.update(
+		m_settings->getSourcePathsExpandedAndAbsolute(),
+		m_settings->getExcludeFiltersExpandedAndAbsolute(),
+		m_settings->getSourceExtensions());
+	return fileManager.getAllSourceFilePaths();
+}
+
+std::vector<std::shared_ptr<IndexerCommand>> SourceGroupTreeSitter::getIndexerCommands(
+	const RefreshInfo& info) const
+{
+	std::vector<std::wstring> args;
+	args.push_back(L"index");
+
+	args.push_back(L"--source-file-path");
+	args.push_back(L"%{SOURCE_FILE_PATH}");
+	args.push_back(L"--database-file-path");
+	args.push_back(L"%{DATABASE_FILE_PATH}");
+
+	if (ApplicationSettings::getInstance()->getVerboseIndexerLoggingEnabled())
+	{
+		args.push_back(L"--verbose");
+	}
+
+	if (info.shallow)
+	{
+		args.push_back(L"--shallow");
+	}
+
+	std::vector<std::shared_ptr<IndexerCommand>> indexerCommands;
+	for (const FilePath& sourceFilePath: getAllSourceFilePaths())
+	{
+		if (info.filesToIndex.find(sourceFilePath) != info.filesToIndex.end())
+		{
+			indexerCommands.push_back(std::make_shared<IndexerCommandCustom>(
+				INDEXER_COMMAND_TREE_SITTER,
+				ResourcePaths::getTreeSitterIndexerFilePath().wstr(),
+				args,
+				m_settings->getProjectSettings()->getProjectFilePath(),
+				m_settings->getProjectSettings()->getTempDBFilePath(),
+				std::to_wstring(SqliteIndexStorage::getStorageVersion()),
+				sourceFilePath,
+				true));
+		}
+	}
+
+	return indexerCommands;
+}
+
+std::shared_ptr<SourceGroupSettings> SourceGroupTreeSitter::getSourceGroupSettings()
+{
+	return m_settings;
+}
+
+std::shared_ptr<const SourceGroupSettings> SourceGroupTreeSitter::getSourceGroupSettings() const
+{
+	return m_settings;
+}

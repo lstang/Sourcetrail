@@ -70,3 +70,17 @@ FilePath ResourcePaths::getCsharpIndexerFilePath()
 	}
 	return getCsharpDirectoryPath().concatenate(L"SourcetrailCsharpIndexer");
 }
+
+FilePath ResourcePaths::getTreeSitterDirectoryPath()
+{
+	return AppPath::getSharedDataDirectoryPath().concatenate(L"data/tree_sitter/");
+}
+
+FilePath ResourcePaths::getTreeSitterIndexerFilePath()
+{
+	if (utility::getOsType() == OS_WINDOWS)
+	{
+		return getTreeSitterDirectoryPath().concatenate(L"SourcetrailTreeSitterIndexer.exe");
+	}
+	return getTreeSitterDirectoryPath().concatenate(L"SourcetrailTreeSitterIndexer");
+}

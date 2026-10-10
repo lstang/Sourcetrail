@@ -71,6 +71,7 @@
 #	include "SourceGroupSettingsPythonEmpty.h"
 #endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
 #include "SourceGroupSettingsCsharpEmpty.h"
+#include "SourceGroupSettingsTreeSitter.h"
 
 namespace
 {
@@ -314,6 +315,17 @@ template <>
 void addSourceGroupContents<SourceGroupSettingsCsharpEmpty>(
 	QtProjectWizardContentGroup* group,
 	std::shared_ptr<SourceGroupSettingsCsharpEmpty> settings,
+	QtProjectWizardWindow* window)
+{
+	group->addContent(new QtProjectWizardContentPathsSource(settings, window));
+	group->addContent(new QtProjectWizardContentPathsExclude(settings, window));
+	group->addContent(new QtProjectWizardContentExtensions(settings, window));
+}
+
+template <>
+void addSourceGroupContents<SourceGroupSettingsTreeSitter>(
+	QtProjectWizardContentGroup* group,
+	std::shared_ptr<SourceGroupSettingsTreeSitter> settings,
 	QtProjectWizardWindow* window)
 {
 	group->addContent(new QtProjectWizardContentPathsSource(settings, window));
@@ -760,6 +772,12 @@ void QtProjectWizard::selectedSourceGroupChanged(int index)
 	{
 		addSourceGroupContents(summary, settings, this);
 	}
+	else if (
+		std::shared_ptr<SourceGroupSettingsTreeSitter> settings =
+			std::dynamic_pointer_cast<SourceGroupSettingsTreeSitter>(group))
+	{
+		addSourceGroupContents(summary, settings, this);
+	}
 
 	summary->addSpace();
 	summary->addContent(new QtProjectWizardContentRequiredLabel(this));
@@ -1021,6 +1039,10 @@ void QtProjectWizard::selectedProjectType(SourceGroupType sourceGroupType)
 #endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
 	case SOURCE_GROUP_CSHARP_EMPTY:
 		settings = std::make_shared<SourceGroupSettingsCsharpEmpty>(
+			sourceGroupId, m_projectSettings.get());
+		break;
+	case SOURCE_GROUP_TREE_SITTER:
+		settings = std::make_shared<SourceGroupSettingsTreeSitter>(
 			sourceGroupId, m_projectSettings.get());
 		break;
 	case SOURCE_GROUP_CUSTOM_COMMAND:
