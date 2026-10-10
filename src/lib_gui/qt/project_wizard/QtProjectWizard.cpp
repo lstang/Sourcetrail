@@ -70,6 +70,7 @@
 #	include "QtProjectWizardContentPathPythonEnvironment.h"
 #	include "SourceGroupSettingsPythonEmpty.h"
 #endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
+#include "SourceGroupSettingsCsharpEmpty.h"
 
 namespace
 {
@@ -307,9 +308,18 @@ void addSourceGroupContents<SourceGroupSettingsPythonEmpty>(
 	group->addContent(new QtProjectWizardContentPathsExclude(settings, window));
 	group->addContent(new QtProjectWizardContentExtensions(settings, window));
 }
-
 #endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
 
+template <>
+void addSourceGroupContents<SourceGroupSettingsCsharpEmpty>(
+	QtProjectWizardContentGroup* group,
+	std::shared_ptr<SourceGroupSettingsCsharpEmpty> settings,
+	QtProjectWizardWindow* window)
+{
+	group->addContent(new QtProjectWizardContentPathsSource(settings, window));
+	group->addContent(new QtProjectWizardContentPathsExclude(settings, window));
+	group->addContent(new QtProjectWizardContentExtensions(settings, window));
+}
 template <>
 void addSourceGroupContents<SourceGroupSettingsCustomCommand>(
 	QtProjectWizardContentGroup* group,
@@ -744,6 +754,12 @@ void QtProjectWizard::selectedSourceGroupChanged(int index)
 		addSourceGroupContents(summary, settings, this);
 	}
 #endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
+	else if (
+		std::shared_ptr<SourceGroupSettingsCsharpEmpty> settings =
+			std::dynamic_pointer_cast<SourceGroupSettingsCsharpEmpty>(group))
+	{
+		addSourceGroupContents(summary, settings, this);
+	}
 
 	summary->addSpace();
 	summary->addContent(new QtProjectWizardContentRequiredLabel(this));
@@ -1003,7 +1019,10 @@ void QtProjectWizard::selectedProjectType(SourceGroupType sourceGroupType)
 			sourceGroupId, m_projectSettings.get());
 		break;
 #endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
-
+	case SOURCE_GROUP_CSHARP_EMPTY:
+		settings = std::make_shared<SourceGroupSettingsCsharpEmpty>(
+			sourceGroupId, m_projectSettings.get());
+		break;
 	case SOURCE_GROUP_CUSTOM_COMMAND:
 		settings = std::make_shared<SourceGroupSettingsCustomCommand>(
 			sourceGroupId, m_projectSettings.get());

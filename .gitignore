@@ -7,6 +7,7 @@ build-*
 /bin/app/data/java/lib/
 /bin/app/data/projects/ignored/
 /bin/app/data/python/
+/bin/app/data/csharp/
 /bin/app/user/log/
 /bin/app/user/ApplicationSettings.xml
 /bin/app/user/window_settings.ini
@@ -73,3 +74,5 @@ CMakeLists.txt.user*
 /deployment/windows/wixSetup/Setup/build/Setup/Release
 /deployment/windows/wixSetup/Setup/build/Setup/x64
 .omp/
+/csharp_indexer/bin/
+/csharp_indexer/obj/

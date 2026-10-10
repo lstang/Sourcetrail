@@ -590,6 +590,11 @@ void Project::buildIndex(RefreshInfo info, std::shared_ptr<DialogView> dialogVie
 					sourceGroup->getIndexerCommandProvider(info));
 			}
 #endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
+			else if (sourceGroup->getType() == SOURCE_GROUP_CSHARP_EMPTY)
+			{
+				customIndexerCommandProvider->addProvider(
+					sourceGroup->getIndexerCommandProvider(info));
+			}
 			else
 			{
 				indexerCommandProvider->addProvider(sourceGroup->getIndexerCommandProvider(info));

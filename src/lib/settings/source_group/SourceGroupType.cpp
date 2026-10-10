@@ -28,8 +28,9 @@ std::string sourceGroupTypeToString(SourceGroupType v)
 	case SOURCE_GROUP_PYTHON_EMPTY:
 		return "Python Source Group";
 #endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
+	case SOURCE_GROUP_CSHARP_EMPTY:
+		return "C# Source Group";
 	case SOURCE_GROUP_CUSTOM_COMMAND:
-		return "Custom Command Source Group";
 	case SOURCE_GROUP_UNKNOWN:
 		break;
 	}
@@ -64,8 +65,9 @@ std::string sourceGroupTypeToProjectSetupString(SourceGroupType v)
 	case SOURCE_GROUP_PYTHON_EMPTY:
 		return "Empty Python Source Group";
 #endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
+	case SOURCE_GROUP_CSHARP_EMPTY:
+		return "Empty C# Source Group";
 	case SOURCE_GROUP_CUSTOM_COMMAND:
-		return "Custom Command Source Group";
 	case SOURCE_GROUP_UNKNOWN:
 		break;
 	}
@@ -116,6 +118,10 @@ SourceGroupType stringToSourceGroupType(const std::string& v)
 		return SOURCE_GROUP_PYTHON_EMPTY;
 	}
 #endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
+	if (v == sourceGroupTypeToString(SOURCE_GROUP_CSHARP_EMPTY) || v == sourceGroupTypeToProjectSetupString(SOURCE_GROUP_CSHARP_EMPTY))
+	{
+		return SOURCE_GROUP_CSHARP_EMPTY;
+	}
 	if (v == sourceGroupTypeToString(SOURCE_GROUP_CUSTOM_COMMAND))
 	{
 		return SOURCE_GROUP_CUSTOM_COMMAND;

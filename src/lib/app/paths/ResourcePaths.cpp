@@ -56,3 +56,17 @@ FilePath ResourcePaths::getPythonIndexerFilePath()
 	}
 	return getPythonDirectoryPath().concatenate(L"SourcetrailPythonIndexer");
 }
+
+FilePath ResourcePaths::getCsharpDirectoryPath()
+{
+	return AppPath::getSharedDataDirectoryPath().concatenate(L"data/csharp/");
+}
+
+FilePath ResourcePaths::getCsharpIndexerFilePath()
+{
+	if (utility::getOsType() == OS_WINDOWS)
+	{
+		return getCsharpDirectoryPath().concatenate(L"SourcetrailCsharpIndexer.exe");
+	}
+	return getCsharpDirectoryPath().concatenate(L"SourcetrailCsharpIndexer");
+}

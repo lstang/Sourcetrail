@@ -16,6 +16,8 @@ std::string indexerCommandTypeToString(IndexerCommandType type)
 	case INDEXER_COMMAND_PYTHON:
 		return "indexer_command_python";
 #endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
+	case INDEXER_COMMAND_CSHARP:
+		return "indexer_command_csharp";
 	case INDEXER_COMMAND_CUSTOM:
 		return "indexer_command_custom";
 	default:
@@ -38,6 +40,8 @@ IndexerCommandType stringToIndexerCommandType(const std::string& s)
 	if (s == indexerCommandTypeToString(INDEXER_COMMAND_PYTHON))
 		return INDEXER_COMMAND_PYTHON;
 #endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
+	if (s == indexerCommandTypeToString(INDEXER_COMMAND_CSHARP))
+		return INDEXER_COMMAND_CSHARP;
 	if (s == indexerCommandTypeToString(INDEXER_COMMAND_CUSTOM))
 		return INDEXER_COMMAND_CUSTOM;
 	return INDEXER_COMMAND_UNKNOWN;

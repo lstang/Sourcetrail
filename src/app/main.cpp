@@ -45,6 +45,7 @@
 #if BUILD_PYTHON_LANGUAGE_PACKAGE
 #	include "SourceGroupFactoryModulePython.h"
 #endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
+#include "SourceGroupFactoryModuleCsharp.h"
 
 void signalHandler(int signum)
 {
@@ -81,6 +82,7 @@ void addLanguagePackages()
 #if BUILD_PYTHON_LANGUAGE_PACKAGE
 	SourceGroupFactory::getInstance()->addModule(std::make_shared<SourceGroupFactoryModulePython>());
 #endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
+	SourceGroupFactory::getInstance()->addModule(std::make_shared<SourceGroupFactoryModuleCsharp>());
 
 #if BUILD_CXX_LANGUAGE_PACKAGE
 	LanguagePackageManager::getInstance()->addPackage(std::make_shared<LanguagePackageCxx>());

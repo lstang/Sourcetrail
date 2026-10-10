@@ -688,3 +688,10 @@ if (BUILD_PYTHON_LANGUAGE_PACKAGE)
 		settings/source_group/type/SourceGroupSettingsPythonEmpty.h
 	)
 endif()
+
+add_files(
+	LIB
+
+	settings/source_group/component/csharp/SourceGroupSettingsWithSourceExtensionsCsharp.h
+	settings/source_group/type/SourceGroupSettingsCsharpEmpty.h
+)

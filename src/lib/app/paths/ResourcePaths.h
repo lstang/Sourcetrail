@@ -18,6 +18,8 @@ public:
 	static FilePath getPythonDirectoryPath();
 	static FilePath getCxxCompilerHeaderDirectoryPath();
 	static FilePath getPythonIndexerFilePath();
+	static FilePath getCsharpDirectoryPath();
+	static FilePath getCsharpIndexerFilePath();
 };
 
 #endif	  // RESOURCE_PATHS_H

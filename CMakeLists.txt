@@ -45,6 +45,7 @@ set(LIB_GUI_PROJECT_NAME "${PROJECT_NAME}_lib_gui")
 set(LIB_CXX_PROJECT_NAME "${PROJECT_NAME}_lib_cxx")
 set(LIB_JAVA_PROJECT_NAME "${PROJECT_NAME}_lib_java")
 set(LIB_PYTHON_PROJECT_NAME "${PROJECT_NAME}_lib_python")
+set(LIB_CSHARP_PROJECT_NAME "${PROJECT_NAME}_lib_csharp")
 set(LIB_PROJECT_NAME "${PROJECT_NAME}_lib")
 set(TEST_PROJECT_NAME "${PROJECT_NAME}_test")
 
@@ -140,7 +141,7 @@ if (BUILD_CXX_LANGUAGE_PACKAGE)
 		message(STATUS "Found LLVM ${LLVM_VERSION}")
 	endif()
 
-	if (UNIX)
+	if (NOT LLVM_CONFIGURATION_TYPES)
 		set(LLVM_CONFIGURATION_TYPES ".")
 	endif()
 
@@ -148,6 +149,9 @@ if (BUILD_CXX_LANGUAGE_PACKAGE)
 	foreach(LLVM_CONFIGURATION_TYPE ${LLVM_CONFIGURATION_TYPES})
 		if (CLANG_COMPILER_HEADER_SEARCH_PATH STREQUAL "")
 			set (_CLANG_HEADERS_SEARCH_LIST
+				"${Clang_DIR}/../../clang/${LLVM_VERSION}/include"
+				"${LLVM_LIBRARY_DIRS}/clang/${LLVM_VERSION}/include"
+				"${LLVM_INSTALL_PREFIX}/lib/clang/${LLVM_VERSION}/include"
 				"${LLVM_BINARY_DIR}/${LLVM_CONFIGURATION_TYPE}/lib/clang/${LLVM_VERSION}/include"
 				"${LLVM_BINARY_DIR}/${LLVM_CONFIGURATION_TYPE}/lib64/clang/${LLVM_VERSION}/include"
 			)
@@ -262,6 +266,12 @@ if (WIN32)
 			get_filename_component(IMG_NAME "${IMG_DLL}" NAME)
 			configure_file("${IMG_DLL}" "${CMAKE_BINARY_DIR}/${CONFIGURATION}/${TARGET}/imageformats/${IMG_NAME}" COPYONLY)
 		endforeach()
+
+		if (EXISTS "C:/ProgramData/miniconda3/envs/llvm11/Library/bin/zlib.dll")
+			configure_file("C:/ProgramData/miniconda3/envs/llvm11/Library/bin/zlib.dll" "${CMAKE_BINARY_DIR}/${CONFIGURATION}/${TARGET}/zlib.dll" COPYONLY)
+		elseif (EXISTS "${Clang_DIR}/../../../bin/zlib.dll")
+			configure_file("${Clang_DIR}/../../../bin/zlib.dll" "${CMAKE_BINARY_DIR}/${CONFIGURATION}/${TARGET}/zlib.dll" COPYONLY)
+		endif()
 	endfunction(COPY_QT_BINARIES)
 
 	COPY_QT_BINARIES(True True)
@@ -282,6 +292,7 @@ add_subdirectory(src/lib_cxx)
 add_subdirectory(src/lib_gui)
 add_subdirectory(src/lib_java)
 add_subdirectory(src/lib_python)
+add_subdirectory(src/lib_csharp)
 add_subdirectory(src/lib_utility)
 add_subdirectory(src/test)
 
@@ -511,6 +522,24 @@ else()
 endif()
 
 
+# Lib Csharp -------------------------------------------------------------------
+
+add_library(${LIB_CSHARP_PROJECT_NAME} ${LIB_CSHARP_FILES})
+
+create_source_groups(${LIB_CSHARP_FILES})
+
+set_property(
+	TARGET ${LIB_CSHARP_PROJECT_NAME}
+	PROPERTY INCLUDE_DIRECTORIES
+		"${LIB_CSHARP_INCLUDE_PATHS}"
+		"${LIB_UTILITY_INCLUDE_PATHS}"
+		"${LIB_INCLUDE_PATHS}"
+		"${CMAKE_BINARY_DIR}/src/lib"
+)
+
+target_link_libraries(${LIB_CSHARP_PROJECT_NAME} ${LIB_UTILITY_PROJECT_NAME} ${LIB_PROJECT_NAME})
+
+
 # Lib Gui ----------------------------------------------------------------------
 
 # Find includes in corresponding build directories
@@ -552,6 +581,7 @@ set_property(
 		$<$<BOOL:${BUILD_CXX_LANGUAGE_PACKAGE}>:${LIB_CXX_INCLUDE_PATHS}>
 		$<$<BOOL:${BUILD_JAVA_LANGUAGE_PACKAGE}>:${LIB_JAVA_INCLUDE_PATHS}>
 		$<$<BOOL:${BUILD_PYTHON_LANGUAGE_PACKAGE}>:${LIB_PYTHON_INCLUDE_PATHS}>
+		"${LIB_CSHARP_INCLUDE_PATHS}"
 )
 
 # include external header without warnings
@@ -622,8 +652,9 @@ target_link_libraries(
 	${LIB_GUI_PROJECT_NAME}
 	$<$<BOOL:${BUILD_CXX_LANGUAGE_PACKAGE}>:${LIB_CXX_PROJECT_NAME}>
 	$<$<BOOL:${BUILD_JAVA_LANGUAGE_PACKAGE}>:${LIB_JAVA_PROJECT_NAME}>
-	$<$<BOOL:${BUILD_PYTHON_LANGUAGE_PACKAGE}>:${LIB_PYTHON_PROJECT_NAME}>
-	${LIB_PROJECT_NAME}
+		$<$<BOOL:${BUILD_PYTHON_LANGUAGE_PACKAGE}>:${LIB_PYTHON_PROJECT_NAME}>
+		${LIB_CSHARP_PROJECT_NAME}
+		${LIB_PROJECT_NAME}
 )
 
 if (APPLE)
@@ -643,6 +674,7 @@ set_property(
 		$<$<BOOL:${BUILD_CXX_LANGUAGE_PACKAGE}>:${LIB_CXX_INCLUDE_PATHS}>
 		$<$<BOOL:${BUILD_JAVA_LANGUAGE_PACKAGE}>:${LIB_JAVA_INCLUDE_PATHS}>
 		$<$<BOOL:${BUILD_PYTHON_LANGUAGE_PACKAGE}>:${LIB_PYTHON_INCLUDE_PATHS}>
+		"${LIB_CSHARP_INCLUDE_PATHS}"
 )
 
 
@@ -698,8 +730,9 @@ target_link_libraries(
 	${LIB_GUI_PROJECT_NAME}
 	$<$<BOOL:${BUILD_CXX_LANGUAGE_PACKAGE}>:${LIB_CXX_PROJECT_NAME}>
 	$<$<BOOL:${BUILD_JAVA_LANGUAGE_PACKAGE}>:${LIB_JAVA_PROJECT_NAME}>
-	$<$<BOOL:${BUILD_PYTHON_LANGUAGE_PACKAGE}>:${LIB_PYTHON_PROJECT_NAME}>
-	${LIB_PROJECT_NAME}
+		$<$<BOOL:${BUILD_PYTHON_LANGUAGE_PACKAGE}>:${LIB_PYTHON_PROJECT_NAME}>
+		${LIB_CSHARP_PROJECT_NAME}
+		${LIB_PROJECT_NAME}
 )
 
 set_property(
@@ -714,6 +747,7 @@ set_property(
 		$<$<BOOL:${BUILD_CXX_LANGUAGE_PACKAGE}>:${LIB_CXX_INCLUDE_PATHS}>
 		$<$<BOOL:${BUILD_JAVA_LANGUAGE_PACKAGE}>:${LIB_JAVA_INCLUDE_PATHS}>
 		$<$<BOOL:${BUILD_PYTHON_LANGUAGE_PACKAGE}>:${LIB_PYTHON_INCLUDE_PATHS}>
+		"${LIB_CSHARP_INCLUDE_PATHS}"
 )
 
 target_include_directories(${APP_PROJECT_NAME} SYSTEM
@@ -802,12 +836,14 @@ target_link_libraries(
 	${LIB_GUI_PROJECT_NAME}
 	$<$<BOOL:${BUILD_CXX_LANGUAGE_PACKAGE}>:${LIB_CXX_PROJECT_NAME}>
 	$<$<BOOL:${BUILD_JAVA_LANGUAGE_PACKAGE}>:${LIB_JAVA_PROJECT_NAME}>
-	$<$<BOOL:${BUILD_PYTHON_LANGUAGE_PACKAGE}>:${LIB_PYTHON_PROJECT_NAME}>
-	${LIB_PROJECT_NAME}
-	${LIB_GUI_PROJECT_NAME}
-	$<$<BOOL:${BUILD_CXX_LANGUAGE_PACKAGE}>:${LIB_CXX_PROJECT_NAME}>
-	$<$<BOOL:${BUILD_JAVA_LANGUAGE_PACKAGE}>:${LIB_JAVA_PROJECT_NAME}>
-	$<$<BOOL:${BUILD_PYTHON_LANGUAGE_PACKAGE}>:${LIB_PYTHON_PROJECT_NAME}>
+		$<$<BOOL:${BUILD_PYTHON_LANGUAGE_PACKAGE}>:${LIB_PYTHON_PROJECT_NAME}>
+		${LIB_CSHARP_PROJECT_NAME}
+		${LIB_PROJECT_NAME}
+		${LIB_GUI_PROJECT_NAME}
+		$<$<BOOL:${BUILD_CXX_LANGUAGE_PACKAGE}>:${LIB_CXX_PROJECT_NAME}>
+		$<$<BOOL:${BUILD_JAVA_LANGUAGE_PACKAGE}>:${LIB_JAVA_PROJECT_NAME}>
+		$<$<BOOL:${BUILD_PYTHON_LANGUAGE_PACKAGE}>:${LIB_PYTHON_PROJECT_NAME}>
+		${LIB_CSHARP_PROJECT_NAME}
 )
 
 set_property(
@@ -824,6 +860,7 @@ set_property(
 		$<$<BOOL:${BUILD_CXX_LANGUAGE_PACKAGE}>:${LIB_CXX_INCLUDE_PATHS}>
 		$<$<BOOL:${BUILD_JAVA_LANGUAGE_PACKAGE}>:${LIB_JAVA_INCLUDE_PATHS}>
 		$<$<BOOL:${BUILD_PYTHON_LANGUAGE_PACKAGE}>:${LIB_PYTHON_INCLUDE_PATHS}>
+		"${LIB_CSHARP_INCLUDE_PATHS}"
 )
 
 if (WIN32)

@@ -26,6 +26,7 @@
 #if BUILD_PYTHON_LANGUAGE_PACKAGE
 #	include "SourceGroupSettingsPythonEmpty.h"
 #endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
+#include "SourceGroupSettingsCsharpEmpty.h"
 
 const std::wstring ProjectSettings::PROJECT_FILE_EXTENSION = L".srctrlprj";
 const std::wstring ProjectSettings::BOOKMARK_DB_FILE_EXTENSION = L".srctrlbm";
@@ -215,6 +216,9 @@ std::vector<std::shared_ptr<SourceGroupSettings>> ProjectSettings::getAllSourceG
 			settings = std::make_shared<SourceGroupSettingsPythonEmpty>(id, this);
 			break;
 #endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
+		case SOURCE_GROUP_CSHARP_EMPTY:
+			settings = std::make_shared<SourceGroupSettingsCsharpEmpty>(id, this);
+			break;
 		case SOURCE_GROUP_CUSTOM_COMMAND:
 			settings = std::make_shared<SourceGroupSettingsCustomCommand>(id, this);
 			break;
@@ -476,8 +480,9 @@ SettingsMigrator ProjectSettings::getMigrations() const
 		case LANGUAGE_PYTHON:
 			continue;
 #endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
+		case LANGUAGE_CSHARP:
+			continue;
 		case SOURCE_GROUP_CUSTOM_COMMAND:
-		default:
 			continue;
 		}
 

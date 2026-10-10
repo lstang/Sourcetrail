@@ -41,7 +41,7 @@ void SqliteBookmarkStorage::migrateIfNecessary()
 						}
 #endif	  // BUILD_JAVA_LANGUAGE_PACKAGE
 #if BUILD_PYTHON_LANGUAGE_PACKAGE
-						if (currentLanguage == LANGUAGE_PYTHON)
+						if (currentLanguage == LANGUAGE_PYTHON || currentLanguage == LANGUAGE_CSHARP)
 						{
 							separator = ".";
 						}

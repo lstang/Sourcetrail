@@ -1,0 +1,133 @@
+[
+	{
+		"type" : "quotation",
+		"patterns" : [
+			"\"(?:[^\"\\\\]|\\\\.)*\"",
+			"\'(?:[^\'\\\\]|\\\\.)*\'",
+			"\\$@\"(?:\"\"|[^\"])*\"",
+			"@\"(?:\"\"|[^\"])*\"",
+			"\\$\"(?:[^\"\\\\]|\\\\.)*\""
+		],
+		"priority" : true
+	},
+	{
+		"type" : "comment",
+		"patterns" : [ "//[^\n]*" ],
+		"priority" : true
+	},
+	{
+		"type" : "comment",
+		"range" : {
+			"start" : "/\\*",
+			"end" : "\\*/"
+		},
+		"priority" : true
+	},
+	{
+		"type" : "directive",
+		"patterns" : [ "#[A-Za-z0-9_]+[^\n]*" ],
+		"priority" : true
+	},
+	{
+		"type" : "function",
+		"patterns" : [ "\\b[A-Za-z0-9_]+(?=\\()" ]
+	},
+	{
+		"type" : "keyword",
+		"patterns" : [
+			"\\babstract\\b",
+			"\\bas\\b",
+			"\\bbase\\b",
+			"\\bbool\\b",
+			"\\bbreak\\b",
+			"\\bbyte\\b",
+			"\\bcase\\b",
+			"\\bcatch\\b",
+			"\\bchar\\b",
+			"\\bchecked\\b",
+			"\\bclass\\b",
+			"\\bconst\\b",
+			"\\bcontinue\\b",
+			"\\bdecimal\\b",
+			"\\bdefault\\b",
+			"\\bdelegate\\b",
+			"\\bdo\\b",
+			"\\bdouble\\b",
+			"\\belse\\b",
+			"\\benum\\b",
+			"\\bevent\\b",
+			"\\bexplicit\\b",
+			"\\bextern\\b",
+			"\\bfalse\\b",
+			"\\bfinally\\b",
+			"\\bfixed\\b",
+			"\\bfloat\\b",
+			"\\bfor\\b",
+			"\\bforeach\\b",
+			"\\bgoto\\b",
+			"\\bif\\b",
+			"\\bimplicit\\b",
+			"\\bin\\b",
+			"\\bint\\b",
+			"\\binterface\\b",
+			"\\binternal\\b",
+			"\\bis\\b",
+			"\\block\\b",
+			"\\blong\\b",
+			"\\bnamespace\\b",
+			"\\bnew\\b",
+			"\\bnull\\b",
+			"\\bobject\\b",
+			"\\boperator\\b",
+			"\\bout\\b",
+			"\\boverride\\b",
+			"\\bparams\\b",
+			"\\bprivate\\b",
+			"\\bprotected\\b",
+			"\\bpublic\\b",
+			"\\breadonly\\b",
+			"\\brecord\\b",
+			"\\bref\\b",
+			"\\breturn\\b",
+			"\\bsbyte\\b",
+			"\\bsealed\\b",
+			"\\bshort\\b",
+			"\\bsizeof\\b",
+			"\\bstackalloc\\b",
+			"\\bstatic\\b",
+			"\\bstring\\b",
+			"\\bstruct\\b",
+			"\\bswitch\\b",
+			"\\bthis\\b",
+			"\\bthrow\\b",
+			"\\btrue\\b",
+			"\\btry\\b",
+			"\\btypeof\\b",
+			"\\buint\\b",
+			"\\bulong\\b",
+			"\\bunchecked\\b",
+			"\\bunsafe\\b",
+			"\\bushort\\b",
+			"\\busing\\b",
+			"\\bvar\\b",
+			"\\bvirtual\\b",
+			"\\bvoid\\b",
+			"\\bvolatile\\b",
+			"\\bwhile\\b",
+			"\\byield\\b",
+			"\\basync\\b",
+			"\\bawait\\b",
+			"\\bget\\b",
+			"\\bset\\b",
+			"\\binit\\b"
+		]
+	},
+	{
+		"type" : "number",
+		"patterns" : [
+			"\\b0[xX][0-9a-fA-F]+[uUlL]*\\b",
+			"\\b0[bB][01]+[uUlL]*\\b",
+			"\\b[0-9]+(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?[fFdDmMuUlL]*\\b"
+		]
+	}
+]

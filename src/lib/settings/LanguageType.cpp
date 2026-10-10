@@ -18,8 +18,9 @@ std::string languageTypeToString(LanguageType t)
 	case LANGUAGE_PYTHON:
 		return "Python";
 #endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
+	case LANGUAGE_CSHARP:
+		return "C#";
 	case LANGUAGE_CUSTOM:
-		return "Custom";
 	case LANGUAGE_UNKNOWN:
 		break;
 	}
@@ -50,6 +51,10 @@ LanguageType stringToLanguageType(std::string s)
 		return LANGUAGE_PYTHON;
 	}
 #endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
+	if (s == languageTypeToString(LANGUAGE_CSHARP) || s == "csharp" || s == "CSharp")
+	{
+		return LANGUAGE_CSHARP;
+	}
 	if (s == languageTypeToString(LANGUAGE_CUSTOM))
 	{
 		return LANGUAGE_CUSTOM;
@@ -85,8 +90,9 @@ LanguageType getLanguageTypeForSourceGroupType(SourceGroupType t)
 	case SOURCE_GROUP_PYTHON_EMPTY:
 		return LANGUAGE_PYTHON;
 #endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
+	case SOURCE_GROUP_CSHARP_EMPTY:
+		return LANGUAGE_CSHARP;
 	case SOURCE_GROUP_CUSTOM_COMMAND:
-		return LANGUAGE_CUSTOM;
 	default:
 		break;
 	}
