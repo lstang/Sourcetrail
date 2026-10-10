@@ -206,8 +206,14 @@ namespace SourcetrailCsharpIndexer
                 cmd.Parameters.Clear();
                 cmd.Parameters.AddWithValue("@id", fileNodeId);
                 cmd.Parameters.AddWithValue("@path", sourceFilePath);
-                cmd.Parameters.AddWithValue("@mod", File.GetLastWriteTimeUtc(sourceFilePath).ToString("o"));
+                cmd.Parameters.AddWithValue("@mod", File.GetLastWriteTime(sourceFilePath).ToString("yyyy-MM-dd HH:mm:ss"));
                 cmd.Parameters.AddWithValue("@lines", lineCount);
+                cmd.ExecuteNonQuery();
+
+                cmd.CommandText = "INSERT OR REPLACE INTO filecontent(id, content) VALUES (@id, @content);";
+                cmd.Parameters.Clear();
+                cmd.Parameters.AddWithValue("@id", fileNodeId);
+                cmd.Parameters.AddWithValue("@content", code);
                 cmd.ExecuteNonQuery();
             }
 

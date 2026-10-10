@@ -7,8 +7,19 @@
 #include "Graph.h"
 #include "IndexerCommandCustom.h"
 #include "Node.h"
+#include "CodeController.h"
+#include "CodeView.h"
+#include "Component.h"
+#include "MessageActivateOverview.h"
+#include "MessageActivateTokens.h"
 #include "PersistentStorage.h"
 #include "ResourcePaths.h"
+#include "SnippetMerger.h"
+#include "SourceLocation.h"
+#include "SourceLocationCollection.h"
+#include "SourceLocationFile.h"
+#include "SqliteIndexStorage.h"
+#include "TextAccess.h"
 #include "SqliteIndexStorage.h"
 #include "TestStorage.h"
 #include "utilityApp.h"
@@ -91,6 +102,46 @@ std::pair<std::shared_ptr<PersistentStorage>, std::shared_ptr<TestStorage>> pars
 	std::shared_ptr<TestStorage> testStorage = TestStorage::create(persistentStorage);
 	return {persistentStorage, testStorage};
 }
+
+class MockCodeView : public CodeView
+{
+public:
+	MockCodeView() : CodeView(nullptr), m_inListMode(true), shownSnippetCount(0) {}
+	void clear() override {}
+	void showSnippets(const std::vector<CodeFileParams>& files, const CodeParams& params, const CodeScrollParams& scrollParams) override
+	{
+		for (const auto& f: files)
+		{
+			shownSnippetCount += f.snippetParams.size();
+			for (const auto& s: f.snippetParams)
+			{
+				lastCode += s.code;
+			}
+		}
+	}
+	void showSingleFile(const CodeFileParams& file, const CodeParams& params, const CodeScrollParams& scrollParams) override {}
+	void updateSourceLocations(const std::vector<CodeFileParams>& files) override {}
+	void scrollTo(const CodeScrollParams& params, bool animated) override {}
+	bool showsErrors() const override { return false; }
+	void coFocusTokenIds(const std::vector<Id>& coFocusedTokenIds) override {}
+	void deCoFocusTokenIds() override {}
+	bool isInListMode() const override { return m_inListMode; }
+	void setMode(bool listMode) override { m_inListMode = listMode; }
+	bool hasSingleFileCached(const FilePath& filePath) const override { return false; }
+	void createWidgetWrapper() override {}
+	void refreshView() override {}
+	void setNavigationFocus(bool) override {}
+	bool hasNavigationFocus() const override { return false; }
+	bool isVisible() const override { return true; }
+	void findMatches(ScreenSearchSender* sender, const std::wstring& query) override {}
+	void activateMatch(size_t matchIndex) override {}
+	void deactivateMatch(size_t matchIndex) override {}
+	void clearMatches() override {}
+
+	bool m_inListMode;
+	size_t shownSnippetCount;
+	std::string lastCode;
+};
 } // namespace
 
 TEST_CASE("csharp indexer creates classes, methods, calls, and graph elements")
@@ -139,5 +190,29 @@ TEST_CASE("csharp indexer creates classes, methods, calls, and graph elements")
 	Node* fileNode = graph->getNodeById(fileId);
 	REQUIRE(fileNode != nullptr);
 	REQUIRE(fileNode->getChildCount() > 0);
-}
 
+	// Check CodeController shows code snippet when an element is activated
+	auto view = std::make_shared<MockCodeView>();
+	auto controller = std::make_shared<CodeController>(storage.get());
+	Component component(view, controller);
+
+	Id workerClassId = 0;
+	for (const auto& node: storage->getStorageNodes())
+	{
+		if (node.type == nodeKindToInt(NODE_CLASS))
+		{
+			workerClassId = node.id;
+			break;
+		}
+	}
+	REQUIRE(workerClassId > 0);
+
+	MessageActivateOverview dummy;
+	MessageActivateTokens msgClass(&dummy);
+	msgClass.tokenIds = {workerClassId};
+	static_cast<MessageListener<MessageActivateTokens>*>(controller.get())->handleMessageBase(&msgClass);
+
+	REQUIRE(view->shownSnippetCount > 0);
+	REQUIRE(!view->lastCode.empty());
+	REQUIRE(view->lastCode.find("class Worker") != std::string::npos);
+}
