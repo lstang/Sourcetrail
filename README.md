@@ -3,9 +3,9 @@
 Sourcetrail is a free and open-source cross-platform source explorer that helps you get productive on unfamiliar source code. It is:
 * Free
 * Working offline
-* Supporting C/C++ and Java
-* Operating on Linux, Windows (and macOS)
-* Offering a SDK ([SourcetrailDB](https://github.com/CoatiSoftware/SourcetrailDB)) to write custom language extensions
+* Supporting C/C++, Java, C#, and multi-language indexing via Tree-sitter (Rust, Python, JavaScript, TypeScript, Go, etc.)
+* Operating on Windows, Linux (and macOS)
+* Offering an SDK ([SourcetrailDB](https://github.com/CoatiSoftware/SourcetrailDB)) to write custom language extensions
 
 Sourcetrail is licensed under the [GNU General Public License Version 3](LICENSE.txt).
 
@@ -28,13 +28,12 @@ This is a **fork** of the Sourcetrail project and I want to keep this project at
 
 ### Binary Releases
 
-|Name                        |Platform     |Packaging                  |Build        |
-|----------------------------|-------------|---------------------------|-------------|
-|Sourcetrail                 |Linux        |ZIP Archive, Debian Package|Vcpkg, System|
-|Sourcetrail                 |Windows      |ZIP Archive                |Vcpkg        |
-|Visual Studio 2026 Extension|Windows      |VSIX Package               |             |
-|Qt Creator 18/19 Plugin     |Linux/Windows|ZIP Archive                |             |
-
+| Name | Platform | Package / Asset | Notes |
+| :--- | :--- | :--- | :--- |
+| **Sourcetrail v2026.10** | Windows (x64) | [Sourcetrail_2026.10_Windows_64bit.zip](https://github.com/lstang/Sourcetrail/releases/tag/v2026.10) | Self-contained portable release with Qt 6.11, Boost 1.91, C# Roslyn indexer, and Tree-sitter multi-language indexer |
+| Sourcetrail | Linux | ZIP Archive, Debian Package | Vcpkg, System |
+| Visual Studio Extension | Windows | VSIX Package | Visual Studio 2022+ integration |
+| Qt Creator Plugin | Linux / Windows | ZIP Archive | Qt Creator integration |
 ### Sourcetrail used/tested/supported libraries: ###
 
 **General**
@@ -60,22 +59,46 @@ This is a **fork** of the Sourcetrail project and I want to keep this project at
 |Maven      |3.9.9       |
 |Gradle     |9.3.1       |
 
+**C#**
+
+| Name | Backend / Framework |
+| :--- | :--- |
+| Roslyn / csharp-ls | .NET 10 (`SourcetrailCsharpIndexer`) |
+
+**Tree-sitter (Multi-Language)**
+
+| Name | Backend / Engine | Supported Languages |
+| :--- | :--- | :--- |
+| Tree-sitter | Native Rust (`SourcetrailTreeSitterIndexer`) | Rust (`.rs`), Python (`.py`), C (`.c`), C++ (`.cpp`), JS/TS (`.js`, `.ts`), Go (`.go`), C# (`.cs`), Java (`.java`) |
 
 **Tests**
 |Name  |System|Vcpkg |
 |------|------|------|
 |Catch2|3.7.1 |3.15.3|
 |GTest |1.17.0|1.18.0|
-
 ### Changes
 
-#### 2026.10
+#### 2026.10 (with C# & Tree-sitter Support)
+- **Rebased onto Upstream 2026.10**: Built with C++23, Qt 6.11, modern CMake, and Catch2 v3.
+- **Native C# Indexer**:
+  - Built on Roslyn (`csharp-ls` / .NET 10) backend (`SourcetrailCsharpIndexer.exe`).
+  - Extracts classes, interfaces, structs, enums, methods, constructors, fields, properties, inheritances, and calls.
+  - Preserves full symbol containment hierarchy (`EDGE_MEMBER`) and explicit definitions (`DEFINITION_EXPLICIT`).
+  - Supports Code Window code snippet display and jump-to-definition.
+  - Registers Empty C# Source Group in the Project Wizard with customizable source paths and exclude filters.
+- **Native Tree-sitter Multi-Language Indexer**:
+  - Standalone native Rust indexer (`SourcetrailTreeSitterIndexer.exe`) with zero external runtime dependencies.
+  - Out-of-the-box support for Rust (`.rs`), JavaScript/TypeScript (`.js`, `.jsx`, `.ts`, `.tsx`), Python (`.py`), C (`.c`, `.h`), C++ (`.cpp`, `.hpp`), Go (`.go`), C# (`.cs`), and Java (`.java`).
+  - Extracts symbols, enclosing scopes, member edges, calls, and inheritances.
+  - Registers Tree-sitter Source Group in the Project Wizard.
+- **Build & Platform Robustness**:
+  - `TimeStamp` parsing is robust against ISO 8601 timestamps and unhandled exceptions.
+  - Made ICU optional in CMake when building against native system/vcpkg locale.
+  - Automated Qt runtime DLL deployment with `windeployqt` post-build command on Windows.
 - Indexing: Improve performance of `Updated files` check
 - Framework: Fix crash in `MessageQueue::unregisterListener` ([#72](https://github.com/petermost/Sourcetrail/issues/72))
 - Logging: Prevent Windows console when starting via Explorer
 - Logging: Don't enable logging by default on initial start
-- Indexing: Remove Python support
-
 #### 2026.6
 - C/C++: Add indexing of C-style casts
 - Logging: Fix deletion of old log files
@@ -255,3 +278,25 @@ System build is not tested and therefore not supported.
 
 ### macOS
 System build is not tested and therefore not supported.
+
+## Building Language Indexers
+
+### C# Indexer (.NET / Roslyn)
+Requires [.NET 10 SDK](https://dotnet.microsoft.com/download):
+```bash
+cd csharp_indexer
+dotnet publish -c Release -o ../bin/app/data/csharp/
+```
+
+### Tree-sitter Multi-Language Indexer (Rust)
+Requires [Rust & Cargo](https://rustup.rs/):
+```bash
+cd tree_sitter_indexer
+cargo build --release
+
+# Copy the compiled binary to the app data directory:
+# Windows:
+copy target\release\SourcetrailTreeSitterIndexer.exe ..\bin\app\data\tree_sitter\
+# Linux / macOS:
+cp target/release/SourcetrailTreeSitterIndexer ../bin/app/data/tree_sitter/
+```
