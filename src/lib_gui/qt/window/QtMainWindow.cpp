@@ -1,5 +1,6 @@
 #include "QtMainWindow.h"
 
+#include "CodemapImporter.h"
 #include "Application.h"
 #include "ApplicationSettings.h"
 #include "Bookmark.h"
@@ -54,6 +55,7 @@
 
 #include <QApplication>
 #include <QActionGroup>
+#include <QMessageBox>
 #include <QDesktopServices>
 #include <QDir>
 #include <QDockWidget>
@@ -597,6 +599,7 @@ void QtMainWindow::showStartScreen()
 	QtStartScreen* startScreen = createWindow<QtStartScreen>();
 	connect(startScreen, &QtStartScreen::openOpenProjectDialog, this, &QtMainWindow::openProject);
 	connect(startScreen, &QtStartScreen::openNewProjectDialog, this, &QtMainWindow::newProject);
+	connect(startScreen, &QtStartScreen::openOpenCodemapDialog, this, &QtMainWindow::openCodemap);
 }
 
 void QtMainWindow::hideStartScreen()
@@ -624,11 +627,53 @@ void QtMainWindow::newProjectFromCDB(const FilePath& filePath)
 void QtMainWindow::openProject()
 {
 	QString fileName = QtFileDialog::getOpenFileName(
-		this, tr("Open File"), FilePath(), QStringLiteral("Sourcetrail Project Files (*.srctrlprj)"));
+		this,
+		tr("Open File"),
+		FilePath(),
+		tr("All Supported Files (*.srctrlprj codegraph.db graph.json *.db *.json);;Sourcetrail Project Files (*.srctrlprj);;CodeGraph Databases (codegraph.db *.db);;Graphify Files (graph.json *.json);;All Files (*.*)"));
 
 	if (!fileName.isEmpty())
 	{
-		MessageLoadProject(FilePath(fileName.toStdString())).dispatch();
+		FilePath path(fileName.toStdString());
+		if (CodemapImporter::isCodemapFile(path))
+		{
+			std::string errorMsg;
+			path = CodemapImporter::importCodemap(path, &errorMsg);
+			if (path.empty())
+			{
+				QMessageBox::warning(this, tr("Failed to Open Codemap"), QString::fromStdString(errorMsg));
+				return;
+			}
+		}
+
+		MessageLoadProject(path).dispatch();
+		m_windowStack.clearWindows();
+	}
+}
+
+void QtMainWindow::openCodemap()
+{
+	QString fileName = QtFileDialog::getOpenFileName(
+		this,
+		tr("Open Codemap"),
+		FilePath(),
+		tr("All Codemap Files (*.srctrlprj codegraph.db graph.json *.db *.json);;CodeGraph Databases (codegraph.db *.db);;Graphify Files (graph.json *.json);;All Files (*.*)"));
+
+	if (!fileName.isEmpty())
+	{
+		FilePath path(fileName.toStdString());
+		if (CodemapImporter::isCodemapFile(path))
+		{
+			std::string errorMsg;
+			path = CodemapImporter::importCodemap(path, &errorMsg);
+			if (path.empty())
+			{
+				QMessageBox::warning(this, tr("Failed to Open Codemap"), QString::fromStdString(errorMsg));
+				return;
+			}
+		}
+
+		MessageLoadProject(path).dispatch();
 		m_windowStack.clearWindows();
 	}
 }
@@ -856,6 +901,7 @@ void QtMainWindow::setupProjectMenu()
 
 	menu->addAction(QtActions::newProject().text(), QtActions::newProject().shortcut(), this, &QtMainWindow::newProject);
 	menu->addAction(QtActions::openProject().text(), QtActions::openProject().shortcut(), this, &QtMainWindow::openProject);
+	menu->addAction(tr("Open &Codemap (CodeGraph / Graphify)..."), this, &QtMainWindow::openCodemap);
 
 	m_recentProjectsMenu = new QMenu(tr("Recent Projects"));
 	menu->addMenu(m_recentProjectsMenu);

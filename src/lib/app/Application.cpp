@@ -4,6 +4,7 @@
 
 #include "ApplicationSettings.h"
 #include "ColorScheme.h"
+#include "CodemapImporter.h"
 #include "DialogView.h"
 #include "GraphViewStyle.h"
 #include "IDECommunicationController.h"
@@ -245,6 +246,17 @@ void Application::handleMessage(MessageLoadProject* message)
 	TRACE("app load project");
 
 	FilePath projectSettingsFilePath(message->projectSettingsFilePath);
+	if (CodemapImporter::isCodemapFile(projectSettingsFilePath))
+	{
+		std::string errorMsg;
+		projectSettingsFilePath = CodemapImporter::importCodemap(projectSettingsFilePath, &errorMsg);
+		if (projectSettingsFilePath.empty())
+		{
+			MessageStatus("Failed to open codemap: " + errorMsg, true, false).dispatch();
+			return;
+		}
+	}
+
 	loadWindow(projectSettingsFilePath.empty());
 
 	if (projectSettingsFilePath.empty())

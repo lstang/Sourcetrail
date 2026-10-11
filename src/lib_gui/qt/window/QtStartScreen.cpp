@@ -128,6 +128,15 @@ QtStartScreen::QtStartScreen(QWidget *parent)
 		connect(openProjectButton, &QPushButton::clicked, this, &QtStartScreen::openOpenProjectDialog);
 
 		col->addWidget(openProjectButton);
+		col->addSpacing(8);
+
+		QPushButton *openCodemapButton = new QPushButton(tr("Open Codemap"), this);
+		openCodemapButton->setAttribute(Qt::WA_LayoutUsesWidgetRect);
+		openCodemapButton->setObjectName(QStringLiteral("projectButton"));
+		openCodemapButton->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+		connect(openCodemapButton, &QPushButton::clicked, this, &QtStartScreen::openOpenCodemapDialog);
+
+		col->addWidget(openCodemapButton);
 	}
 
 	layout->addSpacing(50);

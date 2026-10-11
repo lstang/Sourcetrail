@@ -39,6 +39,7 @@ public:
 
 Q_SIGNALS:
 	void openOpenProjectDialog();
+	void openOpenCodemapDialog();
 	void openNewProjectDialog();
 
 private Q_SLOTS:

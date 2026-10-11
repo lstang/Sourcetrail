@@ -4,6 +4,7 @@
 
 #include "IntermediateStorage.h"
 #include "PersistentStorage.h"
+#include "CodemapImporter.h"
 
 namespace
 {
@@ -276,4 +277,30 @@ TEST_CASE("storage finds and removes depending file nodes")
 	// TS_ASSERT(!storage.getNodeWithId(id3));
 	// TS_ASSERT(!storage.getEdgeWithId(id4));
 	// TS_ASSERT(!storage.getEdgeWithId(id5));
+}
+
+TEST_CASE("codemap importer detects codemap files and directories")
+{
+	REQUIRE(CodemapImporter::isCodemapFile(FilePath("some/path/codegraph.db")));
+	REQUIRE(CodemapImporter::isCodemapFile(FilePath("some/path/test.db")));
+	REQUIRE(CodemapImporter::isCodemapFile(FilePath("some/path/graph.json")));
+	REQUIRE(CodemapImporter::isCodemapFile(FilePath("some/path/data.json")));
+	REQUIRE(!CodemapImporter::isCodemapFile(FilePath("some/path/project.srctrlprj")));
+	REQUIRE(!CodemapImporter::isCodemapFile(FilePath("some/path/readme.txt")));
+	REQUIRE(!CodemapImporter::isCodemapFile(FilePath()));
+}
+
+TEST_CASE("codemap importer loads existing companion project")
+{
+	FilePath testPrj("F:/bitbucket/bitbucket/bitbucket_repo/codegraph_test.srctrlprj");
+	FilePath testDb("F:/bitbucket/bitbucket/bitbucket_repo/codegraph_test.srctrldb");
+
+	if (testPrj.exists() && testDb.exists())
+	{
+		std::string error;
+		FilePath result = CodemapImporter::importCodemap(testDb, &error);
+		REQUIRE(!result.empty());
+		REQUIRE(result.exists());
+		REQUIRE(result.fileName() == "codegraph_test.srctrlprj");
+	}
 }

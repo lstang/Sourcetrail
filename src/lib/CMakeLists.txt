@@ -316,6 +316,8 @@ add_library(Sourcetrail_lib
 	data/TaskMergeStorages.cpp
 	data/TaskMergeStorages.h
 
+	project/CodemapImporter.cpp
+	project/CodemapImporter.h
 	project/Project.cpp
 	project/Project.h
 	project/RefreshInfo.h

@@ -124,6 +124,7 @@ public Q_SLOTS:
 	void newProject();
 	void newProjectFromCDB(const FilePath& filePath);
 	void openProject();
+	void openCodemap();
 	void editProject();
 	void closeProject();
 
