@@ -173,6 +173,8 @@ def convert_codegraph_db(src_db_path, out_prj_path, out_db_path):
     node_id_map = {}
     file_node_map = {}
 
+    file_node_ids = set(r[0] for r in c_src.execute("SELECT id FROM nodes WHERE kind = 'file'").fetchall())
+
     print("Fetching files...")
     files_data = c_src.execute("SELECT path, language, size FROM files").fetchall()
     if not files_data:
@@ -199,17 +201,32 @@ def convert_codegraph_db(src_db_path, out_prj_path, out_db_path):
         c_dst.execute("INSERT INTO file VALUES (?, ?, ?, ?, ?, ?, ?)",
                       (fid, abs_path, lang or 'csharp', '2026-10-11', 1, 1, lc))
 
+    element_batch = []
+    node_batch = []
+    symbol_batch = []
+
+    # Create top-level module nodes from project directories
+    module_node_map = {}
+    for fp in file_node_map.keys():
+        if fp and '/' in fp:
+            top_dir = fp.split('/')[0]
+            if top_dir and not top_dir.startswith('.') and top_dir not in module_node_map:
+                mid = elem_id
+                elem_id += 1
+                module_node_map[top_dir] = mid
+                sname = serialize_name(top_dir, delimiter='.')
+                element_batch.append((mid,))
+                node_batch.append((mid, 8, sname))  # NODE_MODULE = 8
+                symbol_batch.append((mid, 1))
+    print(f"Created {len(module_node_map)} project module nodes.")
     print("Fetching nodes...")
     c_src.execute("SELECT id, kind, name, qualified_name, file_path, start_line, end_line, start_column, end_column, visibility FROM nodes")
     
     loc_id = 1
-    node_batch = []
-    symbol_batch = []
-    element_batch = []
     access_batch = []
     loc_batch = []
     occ_batch = []
-
+    module_child_pairs = set()
     for row in c_src.fetchall():
         str_id, kind, name, qname, fp, sline, eline, scol, ecol, vis = row
         if kind == 'file':
@@ -236,6 +253,11 @@ def convert_codegraph_db(src_db_path, out_prj_path, out_db_path):
                 access_batch.append((nid, 2))
             elif 'private' in v:
                 access_batch.append((nid, 3))
+
+        if fp and '/' in fp:
+            top_dir = fp.split('/')[0]
+            if top_dir in module_node_map and kind.lower() in ('namespace', 'class', 'struct', 'interface', 'function'):
+                module_child_pairs.add((module_node_map[top_dir], nid))
 
         file_nid = file_node_map.get(fp)
         if file_nid and sline and eline:
@@ -269,9 +291,21 @@ def convert_codegraph_db(src_db_path, out_prj_path, out_db_path):
         if src_nid and tgt_nid:
             eid = elem_id
             elem_id += 1
-            etype = EDGE_MAP.get(ekind.lower(), 4)
+            if ekind.lower() == 'contains' and source_id in file_node_ids:
+                # Map file containment to EDGE_USAGE (type 4), NOT EDGE_MEMBER,
+                # so symbols do not become children of files in hierarchy cache!
+                etype = 4
+            else:
+                etype = EDGE_MAP.get(ekind.lower(), 4)
             edge_elem_batch.append((eid,))
             edge_batch.append((eid, etype, src_nid, tgt_nid))
+
+    # Add module containment edges (Module -> Namespace / Class)
+    for mod_nid, child_nid in module_child_pairs:
+        eid = elem_id
+        elem_id += 1
+        edge_elem_batch.append((eid,))
+        edge_batch.append((eid, 1, mod_nid, child_nid))  # 1 = EDGE_MEMBER
 
     print(f"Writing {len(edge_batch)} edges...")
     c_dst.executemany("INSERT INTO element VALUES (?)", edge_elem_batch)
@@ -335,15 +369,30 @@ def convert_graphify_json(src_json_path, out_prj_path, out_db_path):
             c_dst.execute("INSERT INTO node VALUES (?, ?, ?)", (fid, 262144, serialize_file_name(abs_path)))
             c_dst.execute("INSERT INTO file VALUES (?, ?, ?, ?, ?, ?, ?)",
                           (fid, abs_path, 'csharp', '2026-10-11', 1, 1, lc))
-
-    # 2. Register nodes
-    loc_id = 1
     element_batch = []
     node_batch = []
     symbol_batch = []
+
+    # Create top-level module nodes from source file paths
+    module_node_map = {}
+    for sf in file_node_map.keys():
+        if sf and '/' in sf:
+            top_dir = sf.split('/')[0]
+            if top_dir and not top_dir.startswith('.') and top_dir not in module_node_map:
+                mid = elem_id
+                elem_id += 1
+                module_node_map[top_dir] = mid
+                sname = serialize_name(top_dir, delimiter='.')
+                element_batch.append((mid,))
+                node_batch.append((mid, 8, sname))  # NODE_MODULE = 8
+                symbol_batch.append((mid, 1))
+    print(f"Created {len(module_node_map)} project module nodes in graphify.")
+
+    # 2. Register nodes
+    loc_id = 1
     loc_batch = []
     occ_batch = []
-
+    module_child_pairs = set()
     for n in data.get('nodes', []):
         nid = elem_id
         elem_id += 1
@@ -371,6 +420,12 @@ def convert_graphify_json(src_json_path, out_prj_path, out_db_path):
             loc_batch.append((lid, file_nid, line, 1, line, 10, 0))
             occ_batch.append((nid, lid))
 
+        sf = n.get('source_file')
+        if sf and '/' in sf:
+            top_dir = sf.split('/')[0]
+            if top_dir in module_node_map and (is_class or not is_callable):
+                module_child_pairs.add((module_node_map[top_dir], nid))
+
     print(f"Writing {len(node_batch)} nodes and {len(loc_batch)} source locations...")
     c_dst.executemany("INSERT INTO element VALUES (?)", element_batch)
     c_dst.executemany("INSERT INTO node VALUES (?, ?, ?)", node_batch)
@@ -393,6 +448,14 @@ def convert_graphify_json(src_json_path, out_prj_path, out_db_path):
             elem_id += 1
             edge_elem_batch.append((eid,))
             edge_batch.append((eid, etype, src_nid, tgt_nid))
+
+
+    # Add module containment edges (Module -> Class)
+    for mod_nid, child_nid in module_child_pairs:
+        eid = elem_id
+        elem_id += 1
+        edge_elem_batch.append((eid,))
+        edge_batch.append((eid, 1, mod_nid, child_nid))  # 1 = EDGE_MEMBER
 
     print(f"Writing {len(edge_batch)} edges...")
     c_dst.executemany("INSERT INTO element VALUES (?)", edge_elem_batch)
