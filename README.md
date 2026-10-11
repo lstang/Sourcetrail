@@ -16,11 +16,6 @@ This project was archived by the original authors and maintainers of Sourcetrail
 
 This is a **fork** of the Sourcetrail project and I want to keep this project at least buildable.
 
-> [!NOTE]
-> ### Maintenance Status (2026-08-01)
-> For almost two years, I was able to work full-time on Sourcetrail. But now that I have started working on a new customer project, 
-> I won't have as much time for Sourcetrail as I did in the past. I'm still committed to keeping Sourcetrail up to date and buildable, 
-> as I stated in my original statement above, but development will slow down somewhat.
 
 ## __Contents__
 * [Quick Start Guide (Version 2021.4)](DOCUMENTATION.md#getting-started)
@@ -29,15 +24,7 @@ This is a **fork** of the Sourcetrail project and I want to keep this project at
 * [Changes](#changes)
 * [Building](#building)
 
-# :star: Sponsoring
 
-If you like the changes I've done so far, then please consider [sponsoring me](https://github.com/sponsors/petermost). 
-
-By sponsoring me with **$10 per month**, you will gain access to the following **binary releases** in appreciation of your support:
-
-* Sourcetrail
-* :new: Visual Studio 2026 Extension
-* :new: QtCreator 18/19 Plugin
 
 ### Binary Releases
 
