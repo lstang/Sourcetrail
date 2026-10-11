@@ -1,7 +1,7 @@
 
 #ifndef CXX_VERBOSE_AST_VISITOR_H
 #define CXX_VERBOSE_AST_VISITOR_H
-
+#include <clang/Basic/Version.h>
 #include <clang/AST/TypeLoc.h>
 
 #include "CxxAstVisitor.h"
@@ -22,7 +22,11 @@ public:
 private:
 	bool TraverseDecl(clang::Decl* d) override;
 	bool TraverseStmt(clang::Stmt* stmt) override;
+#if CLANG_VERSION_MAJOR >= 22
+	bool TraverseTypeLoc(clang::TypeLoc tl, bool TraverseQualifier = true) override;
+#else
 	bool TraverseTypeLoc(clang::TypeLoc tl) override;
+#endif
 
 	std::string getIndentString() const;
 	static std::string obfuscateName(const std::string& name);

@@ -63,6 +63,10 @@
 #	include "SourceGroupSettingsJavaGradle.h"
 #	include "SourceGroupSettingsJavaMaven.h"
 #endif	  // BUILD_JAVA_LANGUAGE_PACKAGE
+#if BUILD_PYTHON_LANGUAGE_PACKAGE
+#	include "QtProjectWizardContentPathPythonEnvironment.h"
+#	include "SourceGroupSettingsPythonEmpty.h"
+#endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
 #include "SourceGroupSettingsCsharpEmpty.h"
 #include "SourceGroupSettingsTreeSitter.h"
 
@@ -291,6 +295,21 @@ void addSourceGroupContents<SourceGroupSettingsJavaGradle>(
 }
 
 #endif	  // BUILD_JAVA_LANGUAGE_PACKAGE
+
+#if BUILD_PYTHON_LANGUAGE_PACKAGE
+template <>
+void addSourceGroupContents<SourceGroupSettingsPythonEmpty>(
+	QtProjectWizardContentGroup* group,
+	std::shared_ptr<SourceGroupSettingsPythonEmpty> settings,
+	QtProjectWizardWindow* window)
+{
+	group->addContent(new QtProjectWizardContentPathsSource(settings, window));
+	group->addContent(new QtProjectWizardContentPathsExclude(settings, window));
+	group->addContent(new QtProjectWizardContentExtensions(settings, window));
+	group->addSpace();
+	group->addContent(new QtProjectWizardContentPathPythonEnvironment(settings, window));
+}
+#endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
 
 template <>
 void addSourceGroupContents<SourceGroupSettingsCsharpEmpty>(
@@ -742,6 +761,14 @@ void QtProjectWizard::selectedSourceGroupChanged(int index)
 	{
 		addSourceGroupContents(summary, settings, this);
 	}
+#if BUILD_PYTHON_LANGUAGE_PACKAGE
+	else if (
+		std::shared_ptr<SourceGroupSettingsPythonEmpty> settings =
+			std::dynamic_pointer_cast<SourceGroupSettingsPythonEmpty>(group))
+	{
+		addSourceGroupContents(summary, settings, this);
+	}
+#endif
 
 	summary->addSpace();
 	summary->addContent(new QtProjectWizardContentRequiredLabel(this));
@@ -991,6 +1018,12 @@ void QtProjectWizard::selectedProjectType(SourceGroupType sourceGroupType)
 			sourceGroupId, m_projectSettings.get());
 		break;
 #endif	  // BUILD_JAVA_LANGUAGE_PACKAGE
+#if BUILD_PYTHON_LANGUAGE_PACKAGE
+	case SourceGroupType::PYTHON_EMPTY:
+		settings = std::make_shared<SourceGroupSettingsPythonEmpty>(
+			sourceGroupId, m_projectSettings.get());
+		break;
+#endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
 	case SourceGroupType::CSHARP_EMPTY:
 		settings = std::make_shared<SourceGroupSettingsCsharpEmpty>(
 			sourceGroupId, m_projectSettings.get());

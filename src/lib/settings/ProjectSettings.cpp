@@ -2,6 +2,11 @@
 
 #include "SourceGroupSettingsCustomCommand.h"
 #include "SourceGroupSettingsUnloadable.h"
+#include "SourceGroupSettingsCsharpEmpty.h"
+#include "SourceGroupSettingsTreeSitter.h"
+#if BUILD_PYTHON_LANGUAGE_PACKAGE
+#	include "SourceGroupSettingsPythonEmpty.h"
+#endif
 #include "logging.h"
 #include "utilityFile.h"
 #include "utilityString.h"
@@ -183,6 +188,17 @@ std::vector<std::shared_ptr<SourceGroupSettings>> ProjectSettings::getAllSourceG
 			settings = std::make_shared<SourceGroupSettingsJavaGradle>(id, this);
 			break;
 #endif	  // BUILD_JAVA_LANGUAGE_PACKAGE
+#if BUILD_PYTHON_LANGUAGE_PACKAGE
+		case SourceGroupType::PYTHON_EMPTY:
+			settings = std::make_shared<SourceGroupSettingsPythonEmpty>(id, this);
+			break;
+#endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
+		case SourceGroupType::CSHARP_EMPTY:
+			settings = std::make_shared<SourceGroupSettingsCsharpEmpty>(id, this);
+			break;
+		case SourceGroupType::TREE_SITTER:
+			settings = std::make_shared<SourceGroupSettingsTreeSitter>(id, this);
+			break;
 		case SourceGroupType::CUSTOM_COMMAND:
 			settings = std::make_shared<SourceGroupSettingsCustomCommand>(id, this);
 			break;

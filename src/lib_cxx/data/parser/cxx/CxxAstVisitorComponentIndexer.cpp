@@ -16,6 +16,7 @@
 #include <clang/Basic/SourceLocation.h>
 #include <clang/Basic/SourceManager.h>
 #include <clang/Lex/Preprocessor.h>
+#include <clang/Basic/Version.h>
 
 using namespace std;
 using namespace clang;
@@ -40,6 +41,67 @@ void CxxAstVisitorComponentIndexer::beginTraverseNestedNameSpecifierLoc(
 		return;
 	}
 
+#if CLANG_VERSION_MAJOR >= 22
+	switch (loc.getNestedNameSpecifier().getKind())
+	{
+	case clang::NestedNameSpecifier::Kind::Namespace:
+	{
+		auto nsAndPrefix = loc.getNestedNameSpecifier().getAsNamespaceAndPrefix();
+		Id symbolId = getOrCreateSymbolId(nsAndPrefix.Namespace);
+		m_client->recordSymbolKind(symbolId, SymbolKind::NAMESPACE);
+		m_client->recordLocation(
+			symbolId, getParseLocation(loc.getLocalBeginLoc()), ParseLocationType::QUALIFIER);
+	}
+	break;
+	case clang::NestedNameSpecifier::Kind::Type:
+		if (const clang::CXXRecordDecl* recordDecl = loc.getNestedNameSpecifier().getAsRecordDecl())
+		{
+			SymbolKind symbolKind = SymbolKind::UNDEFINED;
+			if (recordDecl->isClass())
+			{
+				symbolKind = SymbolKind::CLASS;
+			}
+			else if (recordDecl->isStruct())
+			{
+				symbolKind = SymbolKind::STRUCT;
+			}
+			else if (recordDecl->isUnion())
+			{
+				symbolKind = SymbolKind::UNION;
+			}
+
+			if (symbolKind != SymbolKind::UNDEFINED)
+			{
+				const Id symbolId = getOrCreateSymbolId(recordDecl);
+				m_client->recordSymbolKind(symbolId, symbolKind);
+				m_client->recordLocation(
+					symbolId, getParseLocation(loc.getLocalBeginLoc()), ParseLocationType::QUALIFIER);
+			}
+		}
+		else if (const clang::Type* type = loc.getNestedNameSpecifier().getAsType())
+		{
+			const ParseLocation parseLocation = getParseLocation(loc.getLocalBeginLoc());
+
+			if (const clang::TemplateTypeParmType* tpt =
+					clang::dyn_cast_or_null<clang::TemplateTypeParmType>(type))
+			{
+				clang::TemplateTypeParmDecl* d = tpt->getDecl();
+				if (d)
+				{
+					m_client->recordLocalSymbol(getLocalSymbolName(d->getLocation()), parseLocation);
+				}
+			}
+			else
+			{
+				const Id symbolId = getOrCreateSymbolId(type);
+				m_client->recordLocation(symbolId, parseLocation, ParseLocationType::QUALIFIER);
+			}
+		}
+		break;
+	default:
+		break;
+	}
+#else
 	switch (loc.getNestedNameSpecifier()->getKind())
 	{
 	case clang::NestedNameSpecifier::Identifier:
@@ -109,7 +171,9 @@ void CxxAstVisitorComponentIndexer::beginTraverseNestedNameSpecifierLoc(
 				m_client->recordLocation(symbolId, parseLocation, ParseLocationType::QUALIFIER);
 			}
 		}
+		break;
 	}
+#endif
 }
 
 void CxxAstVisitorComponentIndexer::beginTraverseTemplateArgumentLoc(
@@ -391,7 +455,7 @@ void CxxAstVisitorComponentIndexer::visitVarDecl(clang::VarDecl* d)
 				{
 					if (const AutoType *autoVariableType = dyn_cast<AutoType>(autoTypeLoc.getTypePtr()))
 					{
-						if (const ConceptDecl *conceptDecl = autoVariableType->getTypeConstraintConcept())
+						if (const ConceptDecl *conceptDecl = dyn_cast_or_null<ConceptDecl>(autoVariableType->getTypeConstraintConcept()))
 						{
 							// Record concept name location:
 							const ParseLocation conceptNameLocation = getParseLocation(autoTypeLoc.getConceptNameLoc());
@@ -592,7 +656,7 @@ void CxxAstVisitorComponentIndexer::visitFunctionDecl(clang::FunctionDecl* d)
 			{
 				const Id contextSymbolId = getOrCreateSymbolId(d);
 
-				if (const ConceptDecl *conceptDecl = autoReturnType->getTypeConstraintConcept())
+				if (const ConceptDecl *conceptDecl = dyn_cast_or_null<ConceptDecl>(autoReturnType->getTypeConstraintConcept()))
 				{
 					// Record the concept reference:
 					const ParseLocation conceptNameLocation = getParseLocation(returnTypeSourceRange.getBegin());
@@ -1219,7 +1283,7 @@ void CxxAstVisitorComponentIndexer::recordConceptReference(const T *d)
 
 void CxxAstVisitorComponentIndexer::recordNamedConceptReference(const ConceptReference *conceptReference)
 {
-	if (const ConceptDecl *conceptDecl = conceptReference->getNamedConcept())
+	if (const ConceptDecl *conceptDecl = dyn_cast_or_null<ConceptDecl>(conceptReference->getNamedConcept()))
 	{
 		const Id conceptDeclId = getOrCreateSymbolId(conceptDecl);
 		const Id contextSymbolId = getOrCreateSymbolId(getAstVisitor()->getContextComponent()->getContext());

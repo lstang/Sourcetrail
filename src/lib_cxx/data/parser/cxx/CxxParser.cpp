@@ -19,7 +19,6 @@
 
 #include <clang/Driver/Compilation.h>
 #include <clang/Driver/Driver.h>
-#include <clang/Driver/Options.h>
 #include <clang/Frontend/CompilerInvocation.h>
 #include <clang/Tooling/Tooling.h>
 #include <llvm/Option/ArgList.h>

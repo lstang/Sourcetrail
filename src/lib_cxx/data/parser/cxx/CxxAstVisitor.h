@@ -1,6 +1,7 @@
 #ifndef CXX_AST_VISITOR_H
 #define CXX_AST_VISITOR_H
 
+#include <clang/Basic/Version.h>
 #include "CxxAstVisitorComponentBraceRecorder.h"
 #include "CxxAstVisitorComponentContext.h"
 #include "CxxAstVisitorComponentDeclRefKind.h"
@@ -67,11 +68,22 @@ public:
 
 	// Virtual for CxxVerboseAstVisitor:
 	virtual bool TraverseDecl(clang::Decl* d);
+#if CLANG_VERSION_MAJOR >= 22
+	virtual bool TraverseTypeLoc(clang::TypeLoc tl, bool TraverseQualifier = true);
+	virtual bool TraverseStmt(clang::Stmt* stmt);
+
+	bool TraverseQualifiedTypeLoc(clang::QualifiedTypeLoc tl, bool TraverseQualifier = true);
+#else
 	virtual bool TraverseTypeLoc(clang::TypeLoc tl);
 	virtual bool TraverseStmt(clang::Stmt* stmt);
 
 	bool TraverseQualifiedTypeLoc(clang::QualifiedTypeLoc tl);
+#endif
+#if CLANG_VERSION_MAJOR >= 22
+	bool TraverseType(clang::QualType t, bool TraverseQualifier = true);
+#else
 	bool TraverseType(clang::QualType t);
+#endif
 	bool TraverseCXXRecordDecl(clang::CXXRecordDecl* d);
 	bool traverseCXXBaseSpecifierHelper(const clang::CXXBaseSpecifier& d);
 	bool TraverseCXXMethodDecl(clang::CXXMethodDecl* d);
@@ -90,7 +102,11 @@ public:
 	bool TraverseClassTemplatePartialSpecializationDecl(clang::ClassTemplatePartialSpecializationDecl* d);
 	bool TraverseDeclRefExpr(clang::DeclRefExpr* s);
 	bool TraverseCXXForRangeStmt(clang::CXXForRangeStmt* s);
+#if CLANG_VERSION_MAJOR >= 22
+	bool TraverseTemplateSpecializationTypeLoc(clang::TemplateSpecializationTypeLoc loc, bool TraverseQualifier = true);
+#else
 	bool TraverseTemplateSpecializationTypeLoc(clang::TemplateSpecializationTypeLoc loc);
+#endif
 	bool TraverseUnresolvedLookupExpr(clang::UnresolvedLookupExpr* s);
 	bool TraverseUnresolvedMemberExpr(clang::UnresolvedMemberExpr* S);
 	bool TraverseTemplateArgumentLoc(const clang::TemplateArgumentLoc& loc);

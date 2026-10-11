@@ -341,6 +341,10 @@ add_library(Sourcetrail_lib
 	settings/source_group/component/SourceGroupSettingsWithSourcePaths.cpp
 	settings/source_group/component/SourceGroupSettingsWithSourcePaths.h
 
+	settings/source_group/component/python/SourceGroupSettingsWithPythonEnvironmentPath.cpp
+	settings/source_group/component/python/SourceGroupSettingsWithPythonEnvironmentPath.h
+	settings/source_group/component/python/SourceGroupSettingsWithSourceExtensionsPython.h
+	settings/source_group/type/SourceGroupSettingsPythonEmpty.h
 	settings/source_group/type/SourceGroupSettingsUnloadable.cpp
 	settings/source_group/type/SourceGroupSettingsUnloadable.h
 
@@ -741,6 +745,7 @@ target_include_directories(Sourcetrail_lib
 	PUBLIC
 		settings/source_group/component/csharp
 		settings/source_group/component/tree_sitter
+		settings/source_group/component/python
 )
 
 target_include_directories(Sourcetrail_lib
@@ -757,6 +762,7 @@ target_link_libraries(Sourcetrail_lib
 
 		$<$<BOOL:${BUILD_CXX_LANGUAGE_PACKAGE}>:Sourcetrail_lib_cxx>
 		$<$<BOOL:${BUILD_JAVA_LANGUAGE_PACKAGE}>:Sourcetrail_lib_java>
+		$<$<BOOL:${BUILD_PYTHON_LANGUAGE_PACKAGE}>:Sourcetrail_lib_python>
 		Sourcetrail_lib_csharp
 		Sourcetrail_lib_tree_sitter
 		External_lib_tinyxml

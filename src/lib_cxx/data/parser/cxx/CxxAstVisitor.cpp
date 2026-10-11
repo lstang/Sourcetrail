@@ -178,7 +178,23 @@ bool CxxAstVisitor::TraverseDecl(clang::Decl* decl)
 	return true;
 }
 
-// same as Base::TraverseQualifiedTypeLoc(..) but we need to make sure to call this.TraverseTypeLoc(..)
+#if CLANG_VERSION_MAJOR >= 22
+bool CxxAstVisitor::TraverseQualifiedTypeLoc(clang::QualifiedTypeLoc tl, bool TraverseQualifier)
+{
+	ASSERT_CRTP_OVERRIDE(TraverseQualifiedTypeLoc);
+
+	return TraverseTypeLoc(tl.getUnqualifiedLoc(), TraverseQualifier);
+}
+
+bool CxxAstVisitor::TraverseTypeLoc(clang::TypeLoc v, bool TraverseQualifier)
+{
+	ASSERT_CRTP_OVERRIDE(TraverseTypeLoc);
+	FOREACH_COMPONENT(beginTraverseTypeLoc(v));
+	bool ret = Base::TraverseTypeLoc(v, TraverseQualifier);
+	FOREACH_COMPONENT(endTraverseTypeLoc(v));
+	return ret;
+}
+#else
 bool CxxAstVisitor::TraverseQualifiedTypeLoc(clang::QualifiedTypeLoc tl)
 {
 	ASSERT_CRTP_OVERRIDE(TraverseQualifiedTypeLoc);
@@ -187,8 +203,19 @@ bool CxxAstVisitor::TraverseQualifiedTypeLoc(clang::QualifiedTypeLoc tl)
 }
 
 DEF_TRAVERSE_TYPE(TypeLoc, {}, {})
-
+#endif
+#if CLANG_VERSION_MAJOR >= 22
+bool CxxAstVisitor::TraverseType(clang::QualType v, bool TraverseQualifier)
+{
+	ASSERT_CRTP_OVERRIDE(TraverseType);
+	FOREACH_COMPONENT(beginTraverseType(v));
+	bool ret = Base::TraverseType(v, TraverseQualifier);
+	FOREACH_COMPONENT(endTraverseType(v));
+	return ret;
+}
+#else
 DEF_TRAVERSE_CUSTOM_TYPE(Type, QualType, {}, {})
+#endif
 
 DEF_TRAVERSE_TYPE_PTR(Stmt, {}, {})
 
@@ -315,10 +342,20 @@ bool CxxAstVisitor::TraverseNestedNameSpecifierLoc(clang::NestedNameSpecifierLoc
 		FOREACH_COMPONENT(beginTraverseNestedNameSpecifierLoc(loc));
 
 		// todo: call method of base class...
+#if CLANG_VERSION_MAJOR >= 22
+		if (clang::NamespaceAndPrefixLoc np = loc.getAsNamespaceAndPrefix())
+		{
+			if (np.Prefix)
+			{
+				ret = TraverseNestedNameSpecifierLoc(np.Prefix);
+			}
+		}
+#else
 		if (clang::NestedNameSpecifierLoc prefix = loc.getPrefix())
 		{
 			ret = TraverseNestedNameSpecifierLoc(prefix);
 		}
+#endif
 
 		FOREACH_COMPONENT(endTraverseNestedNameSpecifierLoc(loc));
 	}
@@ -471,7 +508,18 @@ bool CxxAstVisitor::TraverseClassTemplateSpecializationDecl(clang::ClassTemplate
 DEF_TRAVERSE_TYPE_PTR(ClassTemplatePartialSpecializationDecl, {}, {})
 DEF_TRAVERSE_TYPE_PTR(DeclRefExpr, {}, {})
 DEF_TRAVERSE_TYPE_PTR(CXXForRangeStmt, {}, {})
+#if CLANG_VERSION_MAJOR >= 22
+bool CxxAstVisitor::TraverseTemplateSpecializationTypeLoc(clang::TemplateSpecializationTypeLoc v, bool TraverseQualifier)
+{
+	ASSERT_CRTP_OVERRIDE(TraverseTemplateSpecializationTypeLoc);
+	FOREACH_COMPONENT(beginTraverseTemplateSpecializationTypeLoc(v));
+	bool ret = Base::TraverseTemplateSpecializationTypeLoc(v, TraverseQualifier);
+	FOREACH_COMPONENT(endTraverseTemplateSpecializationTypeLoc(v));
+	return ret;
+}
+#else
 DEF_TRAVERSE_TYPE(TemplateSpecializationTypeLoc, {}, {})
+#endif
 DEF_TRAVERSE_TYPE_PTR(UnresolvedLookupExpr, {}, {})
 DEF_TRAVERSE_TYPE_PTR(UnresolvedMemberExpr, {}, {})
 
@@ -733,7 +781,9 @@ bool CxxAstVisitor::shouldHandleTypeLoc(const clang::TypeLoc& tl) const
 		tl.getAs<clang::TemplateSpecializationTypeLoc>() ||
 		tl.getAs<clang::InjectedClassNameTypeLoc>() ||
 		tl.getAs<clang::DependentNameTypeLoc>() ||
+#if CLANG_VERSION_MAJOR < 22
 		tl.getAs<clang::DependentTemplateSpecializationTypeLoc>() ||
+#endif
 		tl.getAs<clang::SubstTemplateTypeParmTypeLoc>() ||
 		tl.getAs<clang::BuiltinTypeLoc>();
 }

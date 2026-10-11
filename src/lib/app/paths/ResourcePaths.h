@@ -11,6 +11,8 @@ public:
 	static FilePath getFallbackDirectoryPath();
 	static FilePath getFontsDirectoryPath();
 	static FilePath getJavaDirectoryPath();
+	static FilePath getPythonDirectoryPath();
+	static FilePath getPythonIndexerFilePath();
 	static FilePath getCxxCompilerHeaderDirectoryPath();
 	static FilePath getCsharpDirectoryPath();
 	static FilePath getCsharpIndexerFilePath();

@@ -18,6 +18,10 @@
 #	include "SourceGroupJavaEmpty.h"
 #	include "SourceGroupSettingsJavaEmpty.h"
 #endif	  // BUILD_JAVA_LANGUAGE_PACKAGE
+#if BUILD_PYTHON_LANGUAGE_PACKAGE
+#	include "SourceGroupPythonEmpty.h"
+#	include "SourceGroupSettingsPythonEmpty.h"
+#endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
 #include "SourceGroupCsharpEmpty.h"
 #include "SourceGroupSettingsCsharpEmpty.h"
 #include "SourceGroupTreeSitter.h"
@@ -104,6 +108,13 @@ std::vector<FilePath> QtProjectWizardContentPathsSource::getFilePaths() const
 		allSourceFilePaths = SourceGroupJavaEmpty(settings).getAllSourceFilePaths();
 	}
 #endif	  // BUILD_JAVA_LANGUAGE_PACKAGE
+#if BUILD_PYTHON_LANGUAGE_PACKAGE
+	if (std::shared_ptr<SourceGroupSettingsPythonEmpty> settings =
+			std::dynamic_pointer_cast<SourceGroupSettingsPythonEmpty>(m_settings))
+	{
+		allSourceFilePaths = SourceGroupPythonEmpty(settings).getAllSourceFilePaths();
+	}
+#endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
 	if (std::shared_ptr<SourceGroupSettingsCsharpEmpty> settings =
 			std::dynamic_pointer_cast<SourceGroupSettingsCsharpEmpty>(m_settings))
 	{

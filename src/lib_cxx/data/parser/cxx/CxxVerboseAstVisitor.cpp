@@ -76,6 +76,26 @@ bool CxxVerboseAstVisitor::TraverseStmt(clang::Stmt* stmt)
 	return true;
 }
 
+#if CLANG_VERSION_MAJOR >= 22
+bool CxxVerboseAstVisitor::TraverseTypeLoc(clang::TypeLoc tl, bool TraverseQualifier)
+{
+	if (!tl.isNull())
+	{
+		ParseLocation loc = getParseLocation(tl.getSourceRange());
+		LOG_INFO_STREAM_BARE(
+			<< "Indexer - " << getIndentString() << typeLocClassToString(tl) << "TypeLoc <"
+			<< loc.startLineNumber << ":" << loc.startColumnNumber << ", " << loc.endLineNumber
+			<< ":" << loc.endColumnNumber << ">");
+		{
+			[[maybe_unused]]
+			ScopedSwitcher<unsigned int> switcher(m_indentation, m_indentation + 1);
+			
+			return CxxAstVisitor::TraverseTypeLoc(tl, TraverseQualifier);
+		}
+	}
+	return true;
+}
+#else
 bool CxxVerboseAstVisitor::TraverseTypeLoc(clang::TypeLoc tl)
 {
 	if (!tl.isNull())
@@ -94,6 +114,7 @@ bool CxxVerboseAstVisitor::TraverseTypeLoc(clang::TypeLoc tl)
 	}
 	return true;
 }
+#endif
 
 std::string CxxVerboseAstVisitor::getIndentString() const
 {

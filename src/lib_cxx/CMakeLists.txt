@@ -132,3 +132,8 @@ target_link_libraries(Sourcetrail_lib_cxx
 		Sourcetrail_lib
 		External_lib_clang
 )
+
+if (WIN32)
+	target_compile_definitions(Sourcetrail_lib_cxx PRIVATE _SILENCE_ALL_CXX17_DEPRECATION_WARNINGS)
+	target_link_libraries(Sourcetrail_lib_cxx PUBLIC version)
+endif()

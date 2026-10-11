@@ -1,5 +1,6 @@
 #include "CxxTypeNameResolver.h"
 
+#include <clang/Basic/Version.h>
 #include <clang/AST/ASTContext.h>
 #include <clang/AST/DeclTemplate.h>
 #include <clang/AST/PrettyPrinter.h>
@@ -54,8 +55,19 @@ std::unique_ptr<CxxTypeName> CxxTypeNameResolver::getName(const clang::Type* typ
 		}
 		case clang::Type::InjectedClassName:
 		{
+#if CLANG_VERSION_MAJOR >= 22
+			std::unique_ptr<CxxDeclName> declName = CxxDeclNameResolver(this).getName(
+				type->getAs<clang::InjectedClassNameType>()->getDecl());
+			if (declName)
+			{
+				return std::make_unique<CxxTypeName>(
+					declName->getName(), std::vector<std::string>(), declName->getParent());
+			}
+			return nullptr;
+#else
 			return getName(
 				type->getAs<clang::InjectedClassNameType>()->getInjectedSpecializationType());
+#endif
 		}
 		case clang::Type::Typedef:
 		{
@@ -109,10 +121,12 @@ std::unique_ptr<CxxTypeName> CxxTypeNameResolver::getName(const clang::Type* typ
 			}
 			return typeName;
 		}
+#if CLANG_VERSION_MAJOR < 22
 		case clang::Type::Elaborated:
 		{
 			return getName(clang::dyn_cast<clang::ElaboratedType>(type)->getNamedType());
 		}
+#endif
 		case clang::Type::Enum:
 		case clang::Type::Record:
 		{
@@ -217,6 +231,7 @@ std::unique_ptr<CxxTypeName> CxxTypeNameResolver::getName(const clang::Type* typ
 				std::vector<std::string>(),
 				std::move(specifierName));
 		}
+#if CLANG_VERSION_MAJOR < 22
 		case clang::Type::DependentTemplateSpecialization:
 		{
 			const clang::DependentTemplateSpecializationType* dependentType =
@@ -238,6 +253,7 @@ std::unique_ptr<CxxTypeName> CxxTypeNameResolver::getName(const clang::Type* typ
 				std::move(templateArguments),
 				std::move(specifierName));
 		}
+#endif
 		case clang::Type::PackExpansion:
 		{
 			return getName(clang::dyn_cast<clang::PackExpansionType>(type)->getPattern());

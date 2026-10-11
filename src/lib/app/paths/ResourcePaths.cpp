@@ -27,6 +27,20 @@ FilePath ResourcePaths::getJavaDirectoryPath()
 	return AppPath::getSharedDataDirectoryPath().concatenate("data/java/");
 }
 
+FilePath ResourcePaths::getPythonDirectoryPath()
+{
+	return AppPath::getSharedDataDirectoryPath().concatenate("data/python/");
+}
+
+FilePath ResourcePaths::getPythonIndexerFilePath()
+{
+	if constexpr (utility::Platform::isWindows())
+	{
+		return getPythonDirectoryPath().concatenate("SourcetrailPythonIndexer.exe");
+	}
+	return getPythonDirectoryPath().concatenate("SourcetrailPythonIndexer");
+}
+
 FilePath ResourcePaths::getCxxCompilerHeaderDirectoryPath()
 {
 	return AppPath::getSharedDataDirectoryPath().concatenate("data/cxx/include/").getCanonical();

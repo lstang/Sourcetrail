@@ -3,7 +3,11 @@
 #include <clang/Basic/Version.h>
 #include <clang/Driver/Compilation.h>
 #include <clang/Driver/Driver.h>
-#include <clang/Driver/Options.h>
+#if CLANG_VERSION_MAJOR >= 22
+#	include <clang/Options/Options.h>
+#else
+#	include <clang/Driver/Options.h>
+#endif
 #include <clang/Frontend/CompilerInvocation.h>
 #include <clang/Tooling/Tooling.h>
 #include <llvm/Option/ArgList.h>
@@ -47,7 +51,11 @@ ClangInvocationInfo ClangInvocationInfo::getClangInvocationString(
 		const char* const BinaryName = Argv[0];
 		clang::DiagnosticOptions DiagOpts;
 		unsigned MissingArgIndex, MissingArgCount;
+#if CLANG_VERSION_MAJOR >= 22
+		const llvm::opt::OptTable &Opts = clang::getDriverOptTable();
+#else
 		const llvm::opt::OptTable &Opts = clang::driver::getDriverOptTable();
+#endif
 		llvm::opt::InputArgList ParsedArgs = Opts.ParseArgs(
 			clang::ArrayRef<const char*>(Argv).slice(1), MissingArgIndex, MissingArgCount);
 		clang::ParseDiagnosticArgs(DiagOpts, ParsedArgs);

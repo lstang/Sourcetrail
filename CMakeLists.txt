@@ -136,6 +136,7 @@ endif()
 
 option(BUILD_CXX_LANGUAGE_PACKAGE  "Add C/C++ support to the Sourcetrail indexer." OFF)
 option(BUILD_JAVA_LANGUAGE_PACKAGE "Add Java support to the Sourcetrail indexer." OFF)
+option(BUILD_PYTHON_LANGUAGE_PACKAGE "Add Python support to the Sourcetrail indexer." OFF)
 option(BUILD_UNIT_TESTS_PACKAGE    "Build the corresponding language unit tests." OFF)
 
 configureFile(cmake/language_packages.h.in src/lib/language_packages.h)
@@ -160,11 +161,8 @@ if (NOT BUILD_CXX_LANGUAGE_PACKAGE AND NOT BUILD_JAVA_LANGUAGE_PACKAGE)
 	message(WARNING "Building ONLY the GUI, because all language indexers are disabled!")
 endif()
 
-if (BUILD_PYTHON_LANGUAGE_PACKAGE)
-	message(FATAL_ERROR "Python support has been removed!")
-	# See:
-	# - https://github.com/petermost/Sourcetrail/issues/34
-	# - https://github.com/CoatiSoftware/SourcetrailPythonIndexer
+if (NOT BUILD_PYTHON_LANGUAGE_PACKAGE)
+	message(STATUS "Building the Python indexer is disabled. You can enable it by setting 'BUILD_PYTHON_LANGUAGE_PACKAGE' to 'ON'.")
 endif()
 
 #[[
@@ -440,10 +438,23 @@ if (BUILD_CXX_LANGUAGE_PACKAGE)
 	#
 	# Use a minimum version to prevent picking up newer LLVM/Clang versions:
 	set(CLANG_MIN_VERSION 21.1)
-	set(CLANG_MAX_VERSION 22)
-	find_package(Clang ${CLANG_MIN_VERSION} CONFIG REQUIRED) # Version range xx...<yy doesn't work.
+	set(CLANG_MAX_VERSION 25)
+	if (WIN32)
+		if (EXISTS "C:/PROGRA~1/MIB055~1/2022/COMMUN~1/DIASDK~1/lib/amd64/diaguids.lib")
+			set(MSVC_DIA_SDK_DIR "C:/PROGRA~1/MIB055~1/2022/COMMUN~1/DIASDK~1" CACHE PATH "DIA SDK" FORCE)
+			set(DIASDK_LIBRARIES "C:/PROGRA~1/MIB055~1/2022/COMMUN~1/DIASDK~1/lib/amd64/diaguids.lib" CACHE FILEPATH "DIA SDK Library" FORCE)
+			set(DIASDK_INCLUDE_DIR "C:/PROGRA~1/MIB055~1/2022/COMMUN~1/DIASDK~1/include" CACHE PATH "DIA SDK Include" FORCE)
+		endif()
+	endif()
+	find_package(Clang CONFIG REQUIRED)
 	message(STATUS "Found LLVM: ${LLVM_VERSION}") # ${LLVM_INSTALL_PREFIX} ${CLANG_INSTALL_PREFIX}")
 	checkVersionRange("Clang" ${LLVM_VERSION} ${CLANG_MIN_VERSION} ${CLANG_MAX_VERSION})
+
+	if (TARGET LLVMDebugInfoPDB AND EXISTS "C:/PROGRA~1/MIB055~1/2022/COMMUN~1/DIASDK~1/lib/amd64/diaguids.lib")
+		set_target_properties(LLVMDebugInfoPDB PROPERTIES
+			INTERFACE_LINK_LIBRARIES "C:/PROGRA~1/MIB055~1/2022/COMMUN~1/DIASDK~1/lib/amd64/diaguids.lib;LLVMBinaryFormat;LLVMObject;LLVMSupport;LLVMDebugInfoCodeView;LLVMDebugInfoMSF"
+		)
+	endif()
 
 	add_library(External_lib_clang INTERFACE)
 
@@ -506,7 +517,13 @@ if (BUILD_CXX_LANGUAGE_PACKAGE)
 	# Copy required header:
 	# Regular vcpkg (non-overlay-port) path was: "${CLANG_INSTALL_PREFIX}/tools/llvm/lib/clang/${LLVM_VERSION_MAJOR}/include/"
 	function(copyClangHeader configDir)
-		copyDirectory("${LLVM_INSTALL_PREFIX}/lib/clang/${Clang_VERSION_MAJOR}/include/" "${configDir}/app/data/cxx/include/")
+		if (EXISTS "${LLVM_INSTALL_PREFIX}/lib/clang/${Clang_VERSION_MAJOR}/include/")
+			copyDirectory("${LLVM_INSTALL_PREFIX}/lib/clang/${Clang_VERSION_MAJOR}/include/" "${configDir}/app/data/cxx/include/")
+		elseif (EXISTS "${LLVM_INSTALL_PREFIX}/lib/clang/${LLVM_VERSION_MAJOR}/include/")
+			copyDirectory("${LLVM_INSTALL_PREFIX}/lib/clang/${LLVM_VERSION_MAJOR}/include/" "${configDir}/app/data/cxx/include/")
+		elseif (EXISTS "${LLVM_INSTALL_PREFIX}/lib/clang/${LLVM_VERSION}/include/")
+			copyDirectory("${LLVM_INSTALL_PREFIX}/lib/clang/${LLVM_VERSION}/include/" "${configDir}/app/data/cxx/include/")
+		endif()
 	endfunction()
 	forEachBuildConfiguration(copyClangHeader)
 	
@@ -540,6 +557,9 @@ endif()
 
 add_subdirectory(src/lib_csharp)
 add_subdirectory(src/lib_tree_sitter)
+if (BUILD_PYTHON_LANGUAGE_PACKAGE)
+	add_subdirectory(src/lib_python)
+endif()
 ###############################################################################
 # Sourcetrail_indexer
 ###############################################################################

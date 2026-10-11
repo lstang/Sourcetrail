@@ -1,5 +1,6 @@
 #include "GeneratePCHAction.h"
 
+#include <clang/Basic/Version.h>
 #include <clang/Frontend/CompilerInstance.h>
 #include <clang/Frontend/MultiplexConsumer.h>
 #include <clang/Lex/PreprocessorOptions.h>
@@ -37,6 +38,18 @@ std::unique_ptr<clang::ASTConsumer> GeneratePCHAction::CreateASTConsumer(
 	const auto& FrontendOpts = CI.getFrontendOpts();
 	auto Buffer = std::make_shared<clang::PCHBuffer>();
 	std::vector<std::unique_ptr<clang::ASTConsumer>> Consumers;
+#if CLANG_VERSION_MAJOR >= 22
+	Consumers.push_back(std::make_unique<clang::PCHGenerator>(
+		CI.getPreprocessor(),
+		CI.getModuleCache(),
+		OutputFile,
+		Sysroot,
+		Buffer,
+		CI.getCodeGenOpts(),
+		FrontendOpts.ModuleFileExtensions,
+		true,	 // always allow errors in the PCH
+		FrontendOpts.IncludeTimestamps));
+#else
 	Consumers.push_back(std::make_unique<clang::PCHGenerator>(
 		CI.getPreprocessor(),
 		CI.getModuleCache(),
@@ -47,6 +60,7 @@ std::unique_ptr<clang::ASTConsumer> GeneratePCHAction::CreateASTConsumer(
 		true,	 // always allow errors in the PCH
 		FrontendOpts.IncludeTimestamps,
 		+CI.getLangOpts().CacheGeneratedPCH));
+#endif
 	Consumers.push_back(CI.getPCHContainerWriter().CreatePCHContainerGenerator(
 		CI, InFile.str(), OutputFile, std::move(OS), Buffer));
 

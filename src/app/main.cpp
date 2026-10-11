@@ -34,6 +34,9 @@
 	#include "LanguagePackageJava.h"
 	#include "SourceGroupFactoryModuleJava.h"
 #endif	  // BUILD_JAVA_LANGUAGE_PACKAGE
+#if BUILD_PYTHON_LANGUAGE_PACKAGE
+	#include "SourceGroupFactoryModulePython.h"
+#endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
 
 #include "SourceGroupFactoryModuleCsharp.h"
 #include "SourceGroupFactoryModuleTreeSitter.h"
@@ -148,6 +151,9 @@ void addLanguagePackages()
 #endif
 	SourceGroupFactory::getInstance()->addModule(std::make_shared<SourceGroupFactoryModuleCsharp>());
 	SourceGroupFactory::getInstance()->addModule(std::make_shared<SourceGroupFactoryModuleTreeSitter>());
+#if BUILD_PYTHON_LANGUAGE_PACKAGE
+	SourceGroupFactory::getInstance()->addModule(std::make_shared<SourceGroupFactoryModulePython>());
+#endif
 #if BUILD_CXX_LANGUAGE_PACKAGE
 	LanguagePackageManager::getInstance()->addPackage(std::make_shared<LanguagePackageCxx>());
 #endif

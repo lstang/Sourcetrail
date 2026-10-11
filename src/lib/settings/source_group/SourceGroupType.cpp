@@ -24,6 +24,10 @@ std::string sourceGroupTypeToString(SourceGroupType v)
 	case SourceGroupType::JAVA_GRADLE:
 		return "Java Source Group from Gradle";
 #endif	  // BUILD_JAVA_LANGUAGE_PACKAGE
+#if BUILD_PYTHON_LANGUAGE_PACKAGE
+	case SourceGroupType::PYTHON_EMPTY:
+		return "Python Source Group";
+#endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
 	case SourceGroupType::CSHARP_EMPTY:
 		return "C# Source Group";
 	case SourceGroupType::TREE_SITTER:
@@ -60,6 +64,10 @@ std::string sourceGroupTypeToProjectSetupString(SourceGroupType v)
 	case SourceGroupType::JAVA_GRADLE:
 		return "Java Source Group from Gradle";
 #endif	  // BUILD_JAVA_LANGUAGE_PACKAGE
+#if BUILD_PYTHON_LANGUAGE_PACKAGE
+	case SourceGroupType::PYTHON_EMPTY:
+		return "Empty Python Source Group";
+#endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
 	case SourceGroupType::CSHARP_EMPTY:
 		return "Empty C# Source Group";
 	case SourceGroupType::TREE_SITTER:
@@ -110,6 +118,13 @@ SourceGroupType stringToSourceGroupType(const std::string& v)
 		return SourceGroupType::JAVA_GRADLE;
 	}
 #endif	  // BUILD_JAVA_LANGUAGE_PACKAGE
+#if BUILD_PYTHON_LANGUAGE_PACKAGE
+	if (v == sourceGroupTypeToString(SourceGroupType::PYTHON_EMPTY) ||
+		v == sourceGroupTypeToProjectSetupString(SourceGroupType::PYTHON_EMPTY))
+	{
+		return SourceGroupType::PYTHON_EMPTY;
+	}
+#endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
 	if (v == sourceGroupTypeToString(SourceGroupType::CSHARP_EMPTY) || v == sourceGroupTypeToProjectSetupString(SourceGroupType::CSHARP_EMPTY))
 	{
 		return SourceGroupType::CSHARP_EMPTY;

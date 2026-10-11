@@ -14,6 +14,10 @@ std::string languageTypeToString(LanguageType t)
 	case LanguageType::JAVA:
 		return "Java";
 #endif	  // BUILD_JAVA_LANGUAGE_PACKAGE
+#if BUILD_PYTHON_LANGUAGE_PACKAGE
+	case LanguageType::PYTHON:
+		return "Python";
+#endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
 	case LanguageType::CSHARP:
 		return "C#";
 	case LanguageType::TREE_SITTER:
@@ -50,6 +54,10 @@ LanguageType getLanguageTypeForSourceGroupType(SourceGroupType t)
 	case SourceGroupType::JAVA_GRADLE:
 		return LanguageType::JAVA;
 #endif	  // BUILD_JAVA_LANGUAGE_PACKAGE
+#if BUILD_PYTHON_LANGUAGE_PACKAGE
+	case SourceGroupType::PYTHON_EMPTY:
+		return LanguageType::PYTHON;
+#endif	  // BUILD_PYTHON_LANGUAGE_PACKAGE
 	case SourceGroupType::CSHARP_EMPTY:
 		return LanguageType::CSHARP;
 	case SourceGroupType::TREE_SITTER:
