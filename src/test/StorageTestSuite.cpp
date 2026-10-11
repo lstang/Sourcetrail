@@ -8,6 +8,14 @@
 #include "CodemapImporter.h"
 #include "Graph.h"
 #include "Node.h"
+#include "GraphController.h"
+#include "GraphView.h"
+#include "Component.h"
+#include "MessageActivateOverview.h"
+#include "ApplicationSettings.h"
+#include "GraphViewStyle.h"
+#include "GraphViewStyleImpl.h"
+#include <chrono>
 
 namespace
 {
@@ -60,6 +68,40 @@ NameHierarchy createFunctionNameHierarchy(std::string ret, std::string name, std
 */
 
 }	 // namespace
+class TestGraphViewStyleImpl: public GraphViewStyleImpl
+{
+public:
+	float getCharWidth(const std::string&, size_t fontSize) override { return float(fontSize) * 0.6f; }
+	float getCharHeight(const std::string&, size_t fontSize) override { return float(fontSize) * 1.2f; }
+	float getGraphViewZoomDifferenceForPlatform() override { return 1.0f; }
+};
+class TestGraphView: public GraphView
+{
+public:
+	TestGraphView(): GraphView(nullptr) {}
+	void createWidgetWrapper() override {}
+	void refreshView() override {}
+	void rebuildGraph(
+		std::shared_ptr<Graph>,
+		const std::vector<std::shared_ptr<DummyNode>>&,
+		const std::vector<std::shared_ptr<DummyEdge>>&,
+		const GraphParams) override {}
+	void clear() override {}
+	void coFocusTokenIds(const std::vector<Id>&) override {}
+	void deCoFocusTokenIds(const std::vector<Id>&) override {}
+	void resizeView() override {}
+	Vec2i getViewSize() const override { return {1000, 1000}; }
+	GroupType getGrouping() const override { return GroupType::NONE; }
+	void scrollToValues(int, int) override {}
+	void activateEdge(Id) override {}
+	void setNavigationFocus(bool) override {}
+	bool hasNavigationFocus() const override { return false; }
+	bool isVisible() const override { return true; }
+	void findMatches(ScreenSearchSender*, const std::string&) override {}
+	void activateMatch(size_t) override {}
+	void deactivateMatch(size_t) override {}
+	void clearMatches() override {}
+};
 
 TEST_CASE("storage saves file")
 {
@@ -334,5 +376,54 @@ TEST_CASE("codemap getGraphForAll returns classes and modules")
 		REQUIRE(fileCount > 0);
 		REQUIRE(classCount > 0);
 		REQUIRE(moduleCount > 0);
+	}
+}
+
+TEST_CASE("benchmark overview top level activation timing")
+{
+	FilePath testDb("F:/bitbucket/bitbucket/bitbucket_repo/sw_mbi_cbv9/.codegraph/codegraph.srctrldb");
+	if (testDb.exists())
+	{
+		PersistentStorage storage(testDb, FilePath());
+		storage.setup();
+		storage.buildCaches();
+
+		auto view = std::make_shared<TestGraphView>();
+		auto controller = std::make_shared<GraphController>(&storage);
+		Component component(view, controller);
+		GraphViewStyle::setImpl(std::make_shared<TestGraphViewStyleImpl>());
+		GraphViewStyle::loadStyleSettings();
+
+		// 1. Measure BY_NAME
+		ApplicationSettings::getInstance()->setGraphNodeOrderType(NodeOrderType::BY_NAME);
+		auto t0 = std::chrono::high_resolution_clock::now();
+		MessageActivateOverview msg1(NodeTypeSet::all());
+		controller->handleMessage(&msg1);
+		auto t1 = std::chrono::high_resolution_clock::now();
+		double msByName = std::chrono::duration<double, std::milli>(t1 - t0).count();
+		std::cout << "[BENCHMARK] Overview BY_NAME: " << msByName << " ms" << std::endl;
+
+		// 2. Measure BY_LINES_OF_CODE
+		ApplicationSettings::getInstance()->setGraphNodeOrderType(NodeOrderType::BY_LINES_OF_CODE);
+		auto t2 = std::chrono::high_resolution_clock::now();
+		MessageActivateOverview msg2(NodeTypeSet::all());
+		controller->handleMessage(&msg2);
+		auto t3 = std::chrono::high_resolution_clock::now();
+		double msByLoc = std::chrono::duration<double, std::milli>(t3 - t2).count();
+		std::cout << "[BENCHMARK] Overview BY_LINES_OF_CODE: " << msByLoc << " ms" << std::endl;
+
+		// 3. Measure BY_CALLERS
+		ApplicationSettings::getInstance()->setGraphNodeOrderType(NodeOrderType::BY_CALLERS);
+		auto t4 = std::chrono::high_resolution_clock::now();
+		MessageActivateOverview msg3(NodeTypeSet::all());
+		controller->handleMessage(&msg3);
+		auto t5 = std::chrono::high_resolution_clock::now();
+		double msByCallers = std::chrono::duration<double, std::milli>(t5 - t4).count();
+		std::cout << "[BENCHMARK] Overview BY_CALLERS: " << msByCallers << " ms" << std::endl;
+
+		// Assert performance regression: previously took 13.5s - 34s, now well under 3.5s
+		REQUIRE(msByName < 3500.0);
+		REQUIRE(msByLoc < 3500.0);
+		REQUIRE(msByCallers < 3500.0);
 	}
 }

@@ -30,6 +30,18 @@ public:
 
 	struct DummyNodeComp
 	{
+		NodeOrderType order = NodeOrderType::BY_NAME;
+
+		DummyNodeComp()
+			: order(ApplicationSettings::getInstance()->getGraphNodeOrderType())
+		{
+		}
+
+		DummyNodeComp(NodeOrderType o)
+			: order(o)
+		{
+		}
+
 		bool operator()(const std::shared_ptr<DummyNode>& a, const std::shared_ptr<DummyNode>& b) const
 		{
 			if (a->bundleId != b->bundleId)
@@ -41,8 +53,7 @@ public:
 				return a->isBundleNode();
 			}
 
-			return DummyNode::compareNodes(
-				a, b, ApplicationSettings::getInstance()->getGraphNodeOrderType());
+			return DummyNode::compareNodes(a, b, order);
 		}
 	};
 
@@ -401,11 +412,17 @@ public:
 		{
 			return lineCount;
 		}
+		if (aggregatedLineCountValid)
+		{
+			return aggregatedLineCount;
+		}
 		size_t sum = 0;
 		for (const auto& sub : subNodes)
 		{
 			sum += sub->getLineCount();
 		}
+		aggregatedLineCount = sum;
+		aggregatedLineCountValid = true;
 		return sum;
 	}
 
@@ -415,11 +432,17 @@ public:
 		{
 			return callerCount;
 		}
+		if (aggregatedCallerCountValid)
+		{
+			return aggregatedCallerCount;
+		}
 		size_t sum = 0;
 		for (const auto& sub : subNodes)
 		{
 			sum += sub->getCallerCount();
 		}
+		aggregatedCallerCount = sum;
+		aggregatedCallerCountValid = true;
 		return sum;
 	}
 
@@ -429,11 +452,17 @@ public:
 		{
 			return calleeCount;
 		}
+		if (aggregatedCalleeCountValid)
+		{
+			return aggregatedCalleeCount;
+		}
 		size_t sum = 0;
 		for (const auto& sub : subNodes)
 		{
 			sum += sub->getCalleeCount();
 		}
+		aggregatedCalleeCount = sum;
+		aggregatedCalleeCountValid = true;
 		return sum;
 	}
 
@@ -441,7 +470,6 @@ public:
 	{
 		return getCallerCount() + getCalleeCount();
 	}
-
 	static bool compareNodes(
 		const std::shared_ptr<DummyNode>& a,
 		const std::shared_ptr<DummyNode>& b,
@@ -478,13 +506,10 @@ public:
 			break;
 		}
 
-		if (utility::isCaseInsensitiveLess(a->name, b->name))
+		const int cmp = utility::caseInsensitiveCompare(a->name, b->name);
+		if (cmp != 0)
 		{
-			return true;
-		}
-		if (utility::isCaseInsensitiveLess(b->name, a->name))
-		{
-			return false;
+			return cmp < 0;
 		}
 		return a->tokenId < b->tokenId;
 	}
@@ -560,6 +585,12 @@ public:
 	size_t callerCount = 0;
 	size_t calleeCount = 0;
 
+	mutable size_t aggregatedLineCount = 0;
+	mutable size_t aggregatedCallerCount = 0;
+	mutable size_t aggregatedCalleeCount = 0;
+	mutable bool aggregatedLineCountValid = false;
+	mutable bool aggregatedCallerCountValid = false;
+	mutable bool aggregatedCalleeCountValid = false;
 	bool active = false;
 	bool connected = false;
 	bool expanded = false;

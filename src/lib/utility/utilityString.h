@@ -108,6 +108,8 @@ bool isCaseInsensitiveEqual(const std::string& a, const std::string& b);
 
 bool isCaseInsensitiveLess(const std::string& s1, const std::string& s2);
 
+int caseInsensitiveCompare(const std::string& s1, const std::string& s2);
+
 }	 // namespace utility
 
 #endif	  // UTILITY_STRING_H

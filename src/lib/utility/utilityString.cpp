@@ -588,7 +588,12 @@ bool isCaseInsensitiveEqual(const std::string &s1, const std::string &s2)
 
 bool isCaseInsensitiveLess(const std::string &s1, const std::string &s2)
 {
-	return getCollatorFacet().compare(boost::locale::collate_level::secondary, s1, s2) < 0;
+	return caseInsensitiveCompare(s1, s2) < 0;
+}
+
+int caseInsensitiveCompare(const std::string &s1, const std::string &s2)
+{
+	return getCollatorFacet().compare(boost::locale::collate_level::secondary, s1, s2);
 }
 
 static inline utf::code_point doConvertToUtf32(base_converter *converter, const std::string &utf8chars)

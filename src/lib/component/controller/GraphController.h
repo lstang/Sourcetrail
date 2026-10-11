@@ -60,7 +60,7 @@ public:
 
 	TabId getSchedulerId() const override;
 
-private:
+public:
 	void handleMessage(MessageActivateErrors* message) override;
 	void handleMessage(MessageActivateFullTextSearch* message) override;
 	void handleMessage(MessageActivateLegend* message) override;
@@ -84,11 +84,12 @@ private:
 
 	void clear() override;
 
-	void createDummyGraph(const std::shared_ptr<Graph> graph);
+	void createDummyGraph(const std::shared_ptr<Graph> graph, bool isOverview = false);
 	void createDummyGraphAndSetActiveAndVisibility(
 		const std::vector<Id>& tokenIds,
 		const std::shared_ptr<Graph> graph,
-		bool keepExpandedNodesExpanded);
+		bool keepExpandedNodesExpanded,
+		bool isOverview = false);
 	std::vector<std::shared_ptr<DummyNode>> createDummyNodeTopDown(Node* node, Id ancestorId);
 
 	void updateDummyNodeNamesAndAddQualifiers(const std::vector<std::shared_ptr<DummyNode>>& dummyNodes);

@@ -1,7 +1,10 @@
 #include "GraphController.h"
 
+#include <chrono>
+#include <iostream>
 #include <set>
-
+#include <unordered_map>
+#include <unordered_set>
 #include "AccessKind.h"
 #include "Application.h"
 #include "ApplicationSettings.h"
@@ -79,7 +82,7 @@ void GraphController::handleMessage(MessageActivateOverview* message)
 	else
 	{
 		createDummyGraphAndSetActiveAndVisibility(
-			std::vector<Id>(), m_storageAccess->getGraphForAll(), false);
+			std::vector<Id>(), m_storageAccess->getGraphForAll(), false, /*isOverview=*/true);
 
 		bundleNodesByType();
 
@@ -650,7 +653,7 @@ void GraphController::clear()
 	getView()->clear();
 }
 
-void GraphController::createDummyGraph(const std::shared_ptr<Graph> graph)
+void GraphController::createDummyGraph(const std::shared_ptr<Graph> graph, bool isOverview)
 {
 	TRACE();
 
@@ -665,41 +668,50 @@ void GraphController::createDummyGraph(const std::shared_ptr<Graph> graph)
 	m_dummyGraphNodes.clear();
 	m_topLevelAncestorIds.clear();
 
-	std::set<Id> addedNodes;
+	std::unordered_set<Id> addedNodes;
+	if (graph)
+	{
+		addedNodes.reserve(graph->getNodeCount());
+	}
 	std::vector<std::shared_ptr<DummyNode>> dummyNodes;
+	if (graph)
+	{
+		dummyNodes.reserve(graph->getNodeCount());
+	}
 
 	graph->forEachNode([&addedNodes, &dummyNodes, this](Node* node) {
 		Node* parent = node->getLastParentNode();
 		Id parentId = parent->getId();
-		if (addedNodes.find(parentId) != addedNodes.end())
+		if (!addedNodes.insert(parentId).second)
 		{
 			return;
 		}
-		addedNodes.insert(parentId);
 
 		utility::append(dummyNodes, createDummyNodeTopDown(parent, parentId));
 	});
 
-	std::set<Id> addedEdges;
+	std::unordered_set<Id> addedEdges;
 	graph->forEachEdge([&addedEdges, this](Edge* edge) {
-		if (!edge->isType(Edge::EDGE_MEMBER) && addedEdges.find(edge->getId()) == addedEdges.end())
+		if (!edge->isType(Edge::EDGE_MEMBER) && addedEdges.insert(edge->getId()).second)
 		{
 			m_dummyEdges.push_back(std::make_shared<DummyEdge>(
 				edge->getFrom()->getId(), edge->getTo()->getId(), edge));
-			addedEdges.insert(edge->getId());
 		}
 	});
 
 	updateDummyNodeNamesAndAddQualifiers(dummyNodes);
-	updateDummyNodeMetrics(dummyNodes);
 
 	NodeOrderType order = ApplicationSettings::getInstance()->getGraphNodeOrderType();
-	std::sort(
-		dummyNodes.begin(),
-		dummyNodes.end(),
-		[order](const std::shared_ptr<DummyNode>& a, const std::shared_ptr<DummyNode>& b) {
-			return DummyNode::compareNodes(a, b, order);
-		});
+	if (!isOverview)
+	{
+		updateDummyNodeMetrics(dummyNodes);
+		std::sort(
+			dummyNodes.begin(),
+			dummyNodes.end(),
+			[order](const std::shared_ptr<DummyNode>& a, const std::shared_ptr<DummyNode>& b) {
+				return DummyNode::compareNodes(a, b, order);
+			});
+	}
 
 	m_dummyNodes = dummyNodes;
 	m_graph = graph;
@@ -709,7 +721,10 @@ void GraphController::createDummyGraph(const std::shared_ptr<Graph> graph)
 }
 
 void GraphController::createDummyGraphAndSetActiveAndVisibility(
-	const std::vector<Id>& tokenIds, const std::shared_ptr<Graph> graph, bool keepExpandedNodesExpanded)
+	const std::vector<Id>& tokenIds,
+	const std::shared_ptr<Graph> graph,
+	bool keepExpandedNodesExpanded,
+	bool isOverview)
 {
 	std::vector<Id> expandedNodeIds;
 
@@ -718,7 +733,7 @@ void GraphController::createDummyGraphAndSetActiveAndVisibility(
 		expandedNodeIds = getExpandedNodeIds();
 	}
 
-	createDummyGraph(graph);
+	createDummyGraph(graph, isOverview);
 
 	bool noActive = setActive(tokenIds, false);
 
@@ -732,6 +747,9 @@ void GraphController::createDummyGraphAndSetActiveAndVisibility(
 	setVisibility(noActive);
 
 	hideBuiltinTypes();
+
+	m_useBezierEdges = false;
+	m_showsLegend = false;
 }
 
 std::vector<std::shared_ptr<DummyNode>> GraphController::createDummyNodeTopDown(Node* node, Id ancestorId)
@@ -846,8 +864,14 @@ void GraphController::updateDummyNodeNamesAndAddQualifiers(
 void GraphController::updateDummyNodeMetrics(
 	const std::vector<std::shared_ptr<DummyNode>>& dummyNodes)
 {
+	NodeOrderType order = ApplicationSettings::getInstance()->getGraphNodeOrderType();
+	if (order == NodeOrderType::BY_NAME)
+	{
+		return;
+	}
+
 	std::vector<Id> tokenIds;
-	std::map<Id, std::vector<std::shared_ptr<DummyNode>>> nodeMap;
+	std::unordered_map<Id, std::vector<std::shared_ptr<DummyNode>>> nodeMap;
 
 	std::function<void(const std::shared_ptr<DummyNode>&)> collectNodes =
 		[&](const std::shared_ptr<DummyNode>& node) {
@@ -869,56 +893,65 @@ void GraphController::updateDummyNodeMetrics(
 
 	if (m_storageAccess && !tokenIds.empty())
 	{
-		std::shared_ptr<SourceLocationCollection> locs =
-			m_storageAccess->getSourceLocationsForTokenIds(tokenIds);
-		if (locs)
+		if (order == NodeOrderType::BY_LINES_OF_CODE)
 		{
-			locs->forEachSourceLocation([&nodeMap](SourceLocation* loc) {
-				if (loc->isScopeLocation())
-				{
-					const SourceLocation* start = loc->getStartLocation();
-					const SourceLocation* end = loc->getEndLocation();
-					if (start && end && end->getLineNumber() >= start->getLineNumber())
+			std::shared_ptr<SourceLocationCollection> locs =
+				m_storageAccess->getSourceLocationsForTokenIds(tokenIds);
+			if (locs)
+			{
+				locs->forEachSourceLocation([&nodeMap](SourceLocation* loc) {
+					if (loc->isScopeLocation())
 					{
-						size_t count = end->getLineNumber() - start->getLineNumber() + 1;
-						for (Id id : loc->getTokenIds())
+						const SourceLocation* start = loc->getStartLocation();
+						const SourceLocation* end = loc->getEndLocation();
+						if (start && end && end->getLineNumber() >= start->getLineNumber())
 						{
-							auto it = nodeMap.find(id);
-							if (it != nodeMap.end())
+							size_t count = end->getLineNumber() - start->getLineNumber() + 1;
+							for (Id id : loc->getTokenIds())
 							{
-								for (auto& node : it->second)
+								auto it = nodeMap.find(id);
+								if (it != nodeMap.end())
 								{
-									node->lineCount = std::max(node->lineCount, count);
+									for (auto& node : it->second)
+									{
+										node->lineCount = std::max(node->lineCount, count);
+									}
 								}
 							}
 						}
 					}
-				}
-			});
+				});
+			}
 		}
 
-		std::map<Id, size_t> dbCallerCounts = m_storageAccess->getCallerCountsForTokenIds(tokenIds);
-		for (const auto& p : dbCallerCounts)
+		if (order == NodeOrderType::BY_CALLERS || order == NodeOrderType::BY_CALLERS_AND_CALLEES)
 		{
-			auto it = nodeMap.find(p.first);
-			if (it != nodeMap.end())
+			std::map<Id, size_t> dbCallerCounts = m_storageAccess->getCallerCountsForTokenIds(tokenIds);
+			for (const auto& p : dbCallerCounts)
 			{
-				for (auto& node : it->second)
+				auto it = nodeMap.find(p.first);
+				if (it != nodeMap.end())
 				{
-					node->callerCount = std::max(node->callerCount, p.second);
+					for (auto& node : it->second)
+					{
+						node->callerCount = std::max(node->callerCount, p.second);
+					}
 				}
 			}
 		}
 
-		std::map<Id, size_t> dbCalleeCounts = m_storageAccess->getCalleeCountsForTokenIds(tokenIds);
-		for (const auto& p : dbCalleeCounts)
+		if (order == NodeOrderType::BY_CALLEES || order == NodeOrderType::BY_CALLERS_AND_CALLEES)
 		{
-			auto it = nodeMap.find(p.first);
-			if (it != nodeMap.end())
+			std::map<Id, size_t> dbCalleeCounts = m_storageAccess->getCalleeCountsForTokenIds(tokenIds);
+			for (const auto& p : dbCalleeCounts)
 			{
-				for (auto& node : it->second)
+				auto it = nodeMap.find(p.first);
+				if (it != nodeMap.end())
 				{
-					node->calleeCount = std::max(node->calleeCount, p.second);
+					for (auto& node : it->second)
+					{
+						node->calleeCount = std::max(node->calleeCount, p.second);
+					}
 				}
 			}
 		}
@@ -1968,7 +2001,6 @@ void GraphController::layoutNesting()
 	{
 		node->sortSubNodes(order);
 	}
-
 
 	extendEqualFunctionNames(m_dummyNodes);
 
