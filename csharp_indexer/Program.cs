@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -130,7 +131,7 @@ namespace SourcetrailCsharpIndexer
                 throw new FileNotFoundException("Source file not found: " + sourceFilePath);
             }
 
-            string code = File.ReadAllText(sourceFilePath);
+            string code = File.ReadAllText(sourceFilePath, new UTF8Encoding(false, false));
             var tree = CSharpSyntaxTree.ParseText(code, path: sourceFilePath);
             var root = tree.GetCompilationUnitRoot();
             int lineCount = code.Split('\n').Length;

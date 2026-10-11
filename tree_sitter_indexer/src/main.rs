@@ -194,7 +194,11 @@ fn index_file(source_file_path: &str, database_file_path: &str, clear_db: bool) 
         None => ("text", tree_sitter_c::LANGUAGE.into()),
     };
 
-    let code = fs::read_to_string(&source_path)?;
+    let bytes = fs::read(&source_path)?;
+    let code = match String::from_utf8(bytes) {
+        Ok(s) => s,
+        Err(e) => String::from_utf8_lossy(e.as_bytes()).into_owned(),
+    };
     let line_count = code.lines().count().max(1) as i32;
 
     let mut parser = Parser::new();
