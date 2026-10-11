@@ -1,0 +1,205 @@
+#include "Catch2.hpp"
+
+#include <chrono>
+#include <fstream>
+#include <memory>
+
+#include "CodeController.h"
+#include "CodeView.h"
+#include "Component.h"
+#include "FileSystem.h"
+#include "Graph.h"
+#include "IndexerCommandCustom.h"
+#include "MessageActivateOverview.h"
+#include "MessageActivateTokens.h"
+#include "Node.h"
+#include "NodeKind.h"
+#include "PersistentStorage.h"
+#include "ResourcePaths.h"
+#include "SqliteIndexStorage.h"
+#include "TestStorage.h"
+#include "utilityApp.h"
+
+namespace
+{
+void deleteAllContents(const FilePath& tempPath)
+{
+	if (tempPath.recheckExists())
+	{
+		for (const FilePath& path: FileSystem::getFilePathsFromDirectory(tempPath))
+		{
+			FileSystem::remove(path);
+		}
+	}
+}
+
+std::pair<std::shared_ptr<PersistentStorage>, std::shared_ptr<TestStorage>> parseCsharpCode(
+	std::string code)
+{
+	const FilePath rootPath = FilePath("data/CsharpIndexerTestSuite/temp/").makeAbsolute();
+
+	if (!rootPath.exists())
+	{
+		FileSystem::createDirectories(rootPath);
+	}
+
+	deleteAllContents(rootPath);
+
+	const FilePath sourceFilePath = rootPath.getConcatenated("Test.cs");
+	const FilePath tempDbPath = rootPath.getConcatenated("temp.srctrldb");
+
+	{
+		std::ofstream codeFile;
+		codeFile.open(sourceFilePath.str());
+		codeFile << code;
+		codeFile.close();
+	}
+
+	{
+		std::vector<std::string> args;
+		args.push_back("index");
+		args.push_back("--source-file-path");
+		args.push_back("%{SOURCE_FILE_PATH}");
+		args.push_back("--database-file-path");
+		args.push_back("%{DATABASE_FILE_PATH}");
+		args.push_back("--shallow");
+
+		std::shared_ptr<IndexerCommandCustom> indexerCommand = std::make_shared<IndexerCommandCustom>(
+			INDEXER_COMMAND_CSHARP,
+			ResourcePaths::getCsharpIndexerFilePath().str(),
+			args,
+			rootPath,
+			tempDbPath,
+			std::to_string(SqliteIndexStorage::getStorageVersion()),
+			sourceFilePath,
+			true);
+
+		const utility::ProcessOutput out = utility::executeProcess(
+			indexerCommand->getCommand(), indexerCommand->getArguments(), rootPath, false, std::chrono::seconds(10), true);
+
+		REQUIRE(out.exitCode == 0);
+	}
+
+	std::shared_ptr<PersistentStorage> persistentStorage = std::make_shared<PersistentStorage>(
+		tempDbPath, FilePath());
+	persistentStorage->setup();
+	persistentStorage->buildCaches();
+
+	std::shared_ptr<TestStorage> testStorage = TestStorage::create(persistentStorage);
+	return {persistentStorage, testStorage};
+}
+
+class MockCodeView : public CodeView
+{
+public:
+	MockCodeView() : CodeView(nullptr), m_inListMode(true), shownSnippetCount(0) {}
+	void clear() override {}
+	void showSnippets(const std::vector<CodeFileParams>& files, const CodeParams& params, const CodeScrollParams& scrollParams) override
+	{
+		for (const auto& f: files)
+		{
+			shownSnippetCount += f.snippetParams.size();
+			for (const auto& s: f.snippetParams)
+			{
+				lastCode += s.code;
+			}
+		}
+	}
+	void showSingleFile(const CodeFileParams& file, const CodeParams& params, const CodeScrollParams& scrollParams) override {}
+	void updateSourceLocations(const std::vector<CodeFileParams>& files) override {}
+	void scrollTo(const CodeScrollParams& params, bool animated) override {}
+	bool showsErrors() const override { return false; }
+	void coFocusTokenIds(const std::vector<Id>& coFocusedTokenIds) override {}
+	void deCoFocusTokenIds() override {}
+	bool isInListMode() const override { return m_inListMode; }
+	void setMode(bool listMode) override { m_inListMode = listMode; }
+	bool hasSingleFileCached(const FilePath& filePath) const override { return false; }
+	void createWidgetWrapper() override {}
+	void refreshView() override {}
+	void setNavigationFocus(bool) override {}
+	bool hasNavigationFocus() const override { return false; }
+	bool isVisible() const override { return true; }
+	std::string getName() const override { return "MockCodeView"; }
+	void findMatches(ScreenSearchSender* sender, const std::string& query) override {}
+	void activateMatch(size_t matchIndex) override {}
+	void deactivateMatch(size_t matchIndex) override {}
+	void clearMatches() override {}
+
+	bool m_inListMode;
+	size_t shownSnippetCount;
+	std::string lastCode;
+};
+} // namespace
+
+TEST_CASE("csharp indexer creates classes, methods, calls, and graph elements")
+{
+	auto res = parseCsharpCode(
+		"namespace SampleNamespace\n"
+		"{\n"
+		"    public interface IWorker\n"
+		"    {\n"
+		"        void DoWork();\n"
+		"    }\n"
+		"    public class Worker : IWorker\n"
+		"    {\n"
+		"        public void DoWork()\n"
+		"        {\n"
+		"            Log();\n"
+		"        }\n"
+		"        private void Log()\n"
+		"        {\n"
+		"        }\n"
+		"    }\n"
+		"}\n");
+
+	auto storage = res.first;
+	auto testStorage = res.second;
+
+	// Check symbols extracted
+	REQUIRE(testStorage->classes.size() >= 1);
+	REQUIRE(testStorage->interfaces.size() >= 1);
+	REQUIRE(testStorage->methods.size() >= 2);
+	REQUIRE(testStorage->inheritances.size() >= 1);
+	REQUIRE(testStorage->calls.size() >= 1);
+
+	// Check graph contains the symbols when file contents are queried
+	const FilePath sourceFilePath = FilePath("data/CsharpIndexerTestSuite/temp/Test.cs").makeAbsolute();
+	Id fileId = storage->getNodeIdForFileNode(sourceFilePath);
+	REQUIRE(fileId > 0);
+
+	std::shared_ptr<Graph> graph = storage->getGraphForActiveTokenIds({fileId}, {}, nullptr);
+	REQUIRE(graph != nullptr);
+
+	// The code graph must contain more than just the file node!
+	// It must contain classes, methods, interface, etc.
+	REQUIRE(graph->getNodeCount() > 1);
+
+	Node* fileNode = graph->getNodeById(fileId);
+	REQUIRE(fileNode != nullptr);
+	REQUIRE(fileNode->getChildCount() > 0);
+
+	// Check CodeController shows code snippet when an element is activated
+	auto view = std::make_shared<MockCodeView>();
+	auto controller = std::make_shared<CodeController>(storage.get());
+	Component component(view, controller);
+
+	Id workerClassId = 0;
+	for (const auto& node: storage->getStorageNodes())
+	{
+		if (node.type == NODE_CLASS)
+		{
+			workerClassId = node.id;
+			break;
+		}
+	}
+	REQUIRE(workerClassId > 0);
+
+	MessageActivateOverview dummy;
+	MessageActivateTokens msgClass(&dummy);
+	msgClass.tokenIds = {workerClassId};
+	msgClass.dispatchImmediately();
+
+	REQUIRE(view->shownSnippetCount > 0);
+	REQUIRE(!view->lastCode.empty());
+	REQUIRE(view->lastCode.find("class Worker") != std::string::npos);
+}

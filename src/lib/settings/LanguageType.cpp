@@ -14,6 +14,10 @@ std::string languageTypeToString(LanguageType t)
 	case LanguageType::JAVA:
 		return "Java";
 #endif	  // BUILD_JAVA_LANGUAGE_PACKAGE
+	case LanguageType::CSHARP:
+		return "C#";
+	case LanguageType::TREE_SITTER:
+		return "Tree-sitter";
 	case LanguageType::CUSTOM:
 		return "Custom";
 	case LanguageType::UNKNOWN:
@@ -46,6 +50,10 @@ LanguageType getLanguageTypeForSourceGroupType(SourceGroupType t)
 	case SourceGroupType::JAVA_GRADLE:
 		return LanguageType::JAVA;
 #endif	  // BUILD_JAVA_LANGUAGE_PACKAGE
+	case SourceGroupType::CSHARP_EMPTY:
+		return LanguageType::CSHARP;
+	case SourceGroupType::TREE_SITTER:
+		return LanguageType::TREE_SITTER;
 	case SourceGroupType::CUSTOM_COMMAND:
 		return LanguageType::CUSTOM;
 	default:

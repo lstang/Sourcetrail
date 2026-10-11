@@ -63,6 +63,8 @@
 #	include "SourceGroupSettingsJavaGradle.h"
 #	include "SourceGroupSettingsJavaMaven.h"
 #endif	  // BUILD_JAVA_LANGUAGE_PACKAGE
+#include "SourceGroupSettingsCsharpEmpty.h"
+#include "SourceGroupSettingsTreeSitter.h"
 
 using namespace std;
 
@@ -290,6 +292,27 @@ void addSourceGroupContents<SourceGroupSettingsJavaGradle>(
 
 #endif	  // BUILD_JAVA_LANGUAGE_PACKAGE
 
+template <>
+void addSourceGroupContents<SourceGroupSettingsCsharpEmpty>(
+	QtProjectWizardContentGroup* group,
+	std::shared_ptr<SourceGroupSettingsCsharpEmpty> settings,
+	QtProjectWizardWindow* window)
+{
+	group->addContent(new QtProjectWizardContentPathsSource(settings, window));
+	group->addContent(new QtProjectWizardContentPathsExclude(settings, window));
+	group->addContent(new QtProjectWizardContentExtensions(settings, window));
+}
+
+template <>
+void addSourceGroupContents<SourceGroupSettingsTreeSitter>(
+	QtProjectWizardContentGroup* group,
+	std::shared_ptr<SourceGroupSettingsTreeSitter> settings,
+	QtProjectWizardWindow* window)
+{
+	group->addContent(new QtProjectWizardContentPathsSource(settings, window));
+	group->addContent(new QtProjectWizardContentPathsExclude(settings, window));
+	group->addContent(new QtProjectWizardContentExtensions(settings, window));
+}
 template <>
 void addSourceGroupContents<SourceGroupSettingsCustomCommand>(
 	QtProjectWizardContentGroup* group,
@@ -707,6 +730,18 @@ void QtProjectWizard::selectedSourceGroupChanged(int index)
 		addSourceGroupContents(summary, settings, this);
 	}
 #endif	  // BUILD_JAVA_LANGUAGE_PACKAGE
+	else if (
+		std::shared_ptr<SourceGroupSettingsCsharpEmpty> settings =
+			std::dynamic_pointer_cast<SourceGroupSettingsCsharpEmpty>(group))
+	{
+		addSourceGroupContents(summary, settings, this);
+	}
+	else if (
+		std::shared_ptr<SourceGroupSettingsTreeSitter> settings =
+			std::dynamic_pointer_cast<SourceGroupSettingsTreeSitter>(group))
+	{
+		addSourceGroupContents(summary, settings, this);
+	}
 
 	summary->addSpace();
 	summary->addContent(new QtProjectWizardContentRequiredLabel(this));
@@ -956,7 +991,14 @@ void QtProjectWizard::selectedProjectType(SourceGroupType sourceGroupType)
 			sourceGroupId, m_projectSettings.get());
 		break;
 #endif	  // BUILD_JAVA_LANGUAGE_PACKAGE
-
+	case SourceGroupType::CSHARP_EMPTY:
+		settings = std::make_shared<SourceGroupSettingsCsharpEmpty>(
+			sourceGroupId, m_projectSettings.get());
+		break;
+	case SourceGroupType::TREE_SITTER:
+		settings = std::make_shared<SourceGroupSettingsTreeSitter>(
+			sourceGroupId, m_projectSettings.get());
+		break;
 	case SourceGroupType::CUSTOM_COMMAND:
 		settings = std::make_shared<SourceGroupSettingsCustomCommand>(
 			sourceGroupId, m_projectSettings.get());

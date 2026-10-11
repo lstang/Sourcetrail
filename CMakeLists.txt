@@ -56,14 +56,14 @@ configureFile(cmake/productVersion.h.in src/lib/productVersion.h)
 
 set(defaultBuildType "Release")
 set(defaultBuildConfigurations ${defaultBuildType} "Debug" "RelWithDebInfo" "MinSizeRel")
-if (isMultiConfigGenerator)
+if (CMAKE_GENERATOR STREQUAL "Ninja Multi-Config")
 	if (NOT CMAKE_DEFAULT_BUILD_TYPE)
 		message(STATUS "Set multi-config default build type to 'Release'")
 		set(CMAKE_DEFAULT_BUILD_TYPE ${defaultBuildType} CACHE STRING "Multi-config default build type" FORCE)
-
-		# Present a combobox in the cmake-gui:
 		set_property(CACHE CMAKE_DEFAULT_BUILD_TYPE PROPERTY STRINGS ${defaultBuildConfigurations})
 	endif()
+endif()
+if (isMultiConfigGenerator)
 	if(NOT CMAKE_CONFIGURATION_TYPES)
 		set(CMAKE_CONFIGURATION_TYPES ${defaultBuildConfigurations} CACHE STRING "Multi-config available build types" FORCE)
 	endif()
@@ -223,36 +223,30 @@ endif()
 # ICU
 ###############################################################################
 
-find_package(ICU REQUIRED 
+find_package(ICU 
 	COMPONENTS 
 		i18n uc data
 )
-message(STATUS "Found ICU ${ICU_VERSION}: ${ICU_INCLUDE_DIRS}") # ${ICU_LIBRARIES}
 
 add_library(External_lib_icu INTERFACE)
 
-target_compile_definitions(External_lib_icu
-	INTERFACE
-		U_CHARSET_IS_UTF8=1
-)
-
-# The documented imported targets:
-# ICU::i18n
-# ICU::uc
-# ICU::data
-# lead to a linker error: "undefined reference to `icudt74_dat'", 
-# so use the provided result variables:
-
-target_include_directories(External_lib_icu
-	INTERFACE
-		${ICU_INCLUDE_DIRS}
-)
-
-target_link_libraries(External_lib_icu
-	INTERFACE
-		${ICU_LIBRARIES}
-)
-		
+if (ICU_FOUND)
+	message(STATUS "Found ICU ${ICU_VERSION}: ${ICU_INCLUDE_DIRS}")
+	target_compile_definitions(External_lib_icu
+		INTERFACE
+			U_CHARSET_IS_UTF8=1
+	)
+	target_include_directories(External_lib_icu
+		INTERFACE
+			${ICU_INCLUDE_DIRS}
+	)
+	target_link_libraries(External_lib_icu
+		INTERFACE
+			${ICU_LIBRARIES}
+	)
+else()
+	message(STATUS "ICU not found, continuing without ICU")
+endif()
 ###############################################################################
 # Boost / External_lib_boost
 ###############################################################################
@@ -544,6 +538,8 @@ if (BUILD_JAVA_LANGUAGE_PACKAGE)
 	add_subdirectory(java_indexer)
 endif()
 
+add_subdirectory(src/lib_csharp)
+add_subdirectory(src/lib_tree_sitter)
 ###############################################################################
 # Sourcetrail_indexer
 ###############################################################################

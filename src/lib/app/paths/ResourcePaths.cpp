@@ -1,6 +1,6 @@
 #include "ResourcePaths.h"
-
 #include "AppPath.h"
+#include "Platform.h"
 
 FilePath ResourcePaths::getColorSchemesDirectoryPath()
 {
@@ -30,4 +30,32 @@ FilePath ResourcePaths::getJavaDirectoryPath()
 FilePath ResourcePaths::getCxxCompilerHeaderDirectoryPath()
 {
 	return AppPath::getSharedDataDirectoryPath().concatenate("data/cxx/include/").getCanonical();
+}
+
+FilePath ResourcePaths::getCsharpDirectoryPath()
+{
+	return AppPath::getSharedDataDirectoryPath().concatenate("data/csharp/");
+}
+
+FilePath ResourcePaths::getCsharpIndexerFilePath()
+{
+	if constexpr (utility::Platform::isWindows())
+	{
+		return getCsharpDirectoryPath().concatenate("SourcetrailCsharpIndexer.exe");
+	}
+	return getCsharpDirectoryPath().concatenate("SourcetrailCsharpIndexer");
+}
+
+FilePath ResourcePaths::getTreeSitterDirectoryPath()
+{
+	return AppPath::getSharedDataDirectoryPath().concatenate("data/tree_sitter/");
+}
+
+FilePath ResourcePaths::getTreeSitterIndexerFilePath()
+{
+	if constexpr (utility::Platform::isWindows())
+	{
+		return getTreeSitterDirectoryPath().concatenate("SourcetrailTreeSitterIndexer.exe");
+	}
+	return getTreeSitterDirectoryPath().concatenate("SourcetrailTreeSitterIndexer");
 }

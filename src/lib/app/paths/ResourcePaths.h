@@ -12,6 +12,10 @@ public:
 	static FilePath getFontsDirectoryPath();
 	static FilePath getJavaDirectoryPath();
 	static FilePath getCxxCompilerHeaderDirectoryPath();
+	static FilePath getCsharpDirectoryPath();
+	static FilePath getCsharpIndexerFilePath();
+	static FilePath getTreeSitterDirectoryPath();
+	static FilePath getTreeSitterIndexerFilePath();
 };
 
 #endif	  // RESOURCE_PATHS_H

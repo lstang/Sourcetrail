@@ -53,8 +53,9 @@ void QtProjectWizardContentSelect::populate(QGridLayout* layout, int&  /*row*/)
 	sourceGroupInfos[LanguageType::JAVA].push_back(SourceGroupInfo(SourceGroupType::JAVA_GRADLE));
 	sourceGroupInfos[LanguageType::JAVA].push_back(SourceGroupInfo(SourceGroupType::JAVA_EMPTY));
 #endif	  // BUILD_JAVA_LANGUAGE_PACKAGE
+	sourceGroupInfos[LanguageType::CSHARP].push_back(SourceGroupInfo(SourceGroupType::CSHARP_EMPTY));
+	sourceGroupInfos[LanguageType::TREE_SITTER].push_back(SourceGroupInfo(SourceGroupType::TREE_SITTER));
 	sourceGroupInfos[LanguageType::CUSTOM].push_back(SourceGroupInfo(SourceGroupType::CUSTOM_COMMAND));
-
 	// define which icons should be used for which kind of source group
 #if BUILD_CXX_LANGUAGE_PACKAGE
 	m_sourceGroupTypeIconName[SourceGroupType::C_EMPTY]        = QtResources::ICON_EMPTY_ICON;
@@ -68,8 +69,9 @@ void QtProjectWizardContentSelect::populate(QGridLayout* layout, int&  /*row*/)
 	m_sourceGroupTypeIconName[SourceGroupType::JAVA_MAVEN]  = QtResources::ICON_MVN_ICON;
 	m_sourceGroupTypeIconName[SourceGroupType::JAVA_GRADLE] = QtResources::ICON_GRADLE_ICON;
 #endif // BUILD_JAVA_LANGUAGE_PACKAGE
+	m_sourceGroupTypeIconName[SourceGroupType::CSHARP_EMPTY]   = QtResources::ICON_EMPTY_ICON;
+	m_sourceGroupTypeIconName[SourceGroupType::TREE_SITTER]    = QtResources::ICON_EMPTY_ICON;
 	m_sourceGroupTypeIconName[SourceGroupType::CUSTOM_COMMAND] = QtResources::ICON_EMPTY_ICON;
-
 	// define descriptions for each kind of Source Group
 #if BUILD_CXX_LANGUAGE_PACKAGE
 	m_sourceGroupTypeDescriptions[SourceGroupType::C_EMPTY] =
@@ -102,6 +104,13 @@ void QtProjectWizardContentSelect::populate(QGridLayout* layout, int&  /*row*/)
 	m_sourceGroupTypeDescriptions[SourceGroupType::JAVA_GRADLE] =
 		"Create a new Source Group from an existing Gradle project.";
 #endif	  // BUILD_JAVA_LANGUAGE_PACKAGE
+	m_sourceGroupTypeDescriptions[SourceGroupType::CSHARP_EMPTY] =
+		"<p>Create a new Source Group by defining which C# source files will be indexed. This Source "
+		"Group type uses the <a href=\"https://github.com/razzmatazz/csharp-language-server\">csharp-ls</a> "
+		"(Roslyn Language Server) backend.</p>";
+	m_sourceGroupTypeDescriptions[SourceGroupType::TREE_SITTER] =
+		"<p>Create a new Source Group by defining which source files will be indexed using <b>Tree-sitter</b>. "
+		"Supports Rust, Python, C, C++, JavaScript, Go, C#, Java, and more.</p>";
 	m_sourceGroupTypeDescriptions[SourceGroupType::CUSTOM_COMMAND] =
 		"Create a new Source Group executing a custom command on each source file. "
 		"This Source Group type can be used on <a "

@@ -1,3 +1,18 @@
+# Build & output directories:
+/build/
+build-*/
+/bin/app/data/csharp/
+/bin/app/data/tree_sitter/
+/bin/app/data/cxx/
+/bin/app/data/java/lib/
+/bin/app/data/python/
+/bin/app/user/
+/bin/test/data/
+.omp/
+/csharp_indexer/bin/
+/csharp_indexer/obj/
+/tree_sitter_indexer/target/
+
 # CMake
 CMakeUserPresets.json
 

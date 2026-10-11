@@ -54,7 +54,29 @@ TimeStamp::TimeStamp(std::string s): m_time(boost::posix_time::not_a_date_time)
 {
 	if (s.size())
 	{
-		m_time = boost::posix_time::time_from_string(s);
+		try
+		{
+			size_t tPos = s.find('T');
+			if (tPos != std::string::npos)
+			{
+				s[tPos] = ' ';
+			}
+			if (!s.empty() && s.back() == 'Z')
+			{
+				s.pop_back();
+			}
+			size_t dotPos = s.find('.');
+			if (dotPos != std::string::npos)
+			{
+				s = s.substr(0, dotPos);
+			}
+
+			m_time = boost::posix_time::time_from_string(s);
+		}
+		catch (...)
+		{
+			m_time = boost::posix_time::not_a_date_time;
+		}
 	}
 }
 

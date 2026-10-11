@@ -48,6 +48,8 @@ add_executable(Sourcetrail_test
 	ToolChainTestSuite.cpp
 	UtilityStringTestSuite.cpp
 	Vector2TestSuite.cpp
+	CsharpIndexerTestSuite.cpp
+	TreeSitterIndexerTestSuite.cpp
 
 	Snippet.cpp
 )
@@ -66,12 +68,21 @@ target_link_libraries(Sourcetrail_test
 		Sourcetrail_res_gui
 		Catch2::Catch2
 )
-
 if (WIN32)
+	target_compile_definitions(Sourcetrail_test
+		PRIVATE
+			CATCH_CONFIG_NO_WINDOWS_SEH
+	)
+	target_include_directories(Sourcetrail_test
+		PRIVATE
+			${CMAKE_SOURCE_DIR}/src/lib/utility
+	)
 	set_target_properties(Sourcetrail_test
 		PROPERTIES
 			VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/bin/test"
 	)
 endif ()
 
-catch_discover_tests(Sourcetrail_test)
+catch_discover_tests(Sourcetrail_test
+	DL_PATHS "F:/Qt/6.11.1/msvc2022_64/bin"
+)

@@ -730,6 +730,19 @@ if (BUILD_JAVA_LANGUAGE_PACKAGE)
 	)
 endif()
 
+target_sources(Sourcetrail_lib
+	PRIVATE
+		settings/source_group/component/csharp/SourceGroupSettingsWithSourceExtensionsCsharp.h
+		settings/source_group/type/SourceGroupSettingsCsharpEmpty.h
+		settings/source_group/component/tree_sitter/SourceGroupSettingsWithSourceExtensionsTreeSitter.h
+		settings/source_group/type/SourceGroupSettingsTreeSitter.h
+)
+target_include_directories(Sourcetrail_lib
+	PUBLIC
+		settings/source_group/component/csharp
+		settings/source_group/component/tree_sitter
+)
+
 target_include_directories(Sourcetrail_lib
 	PUBLIC
 		.
@@ -744,7 +757,8 @@ target_link_libraries(Sourcetrail_lib
 
 		$<$<BOOL:${BUILD_CXX_LANGUAGE_PACKAGE}>:Sourcetrail_lib_cxx>
 		$<$<BOOL:${BUILD_JAVA_LANGUAGE_PACKAGE}>:Sourcetrail_lib_java>
-
+		Sourcetrail_lib_csharp
+		Sourcetrail_lib_tree_sitter
 		External_lib_tinyxml
 		External_lib_cppsqlite3
 		External_lib_boost

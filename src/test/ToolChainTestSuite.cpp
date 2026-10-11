@@ -1,3 +1,5 @@
+#include "language_packages.h"
+#if BUILD_CXX_LANGUAGE_PACKAGE
 #include "Catch2.hpp"
 
 #include "ToolChain.h"
@@ -229,3 +231,4 @@ TEST_CASE("CDB replace msvc arguments")
 	}
 }
 
+#endif	  // BUILD_CXX_LANGUAGE_PACKAGE

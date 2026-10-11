@@ -35,6 +35,8 @@
 	#include "SourceGroupFactoryModuleJava.h"
 #endif	  // BUILD_JAVA_LANGUAGE_PACKAGE
 
+#include "SourceGroupFactoryModuleCsharp.h"
+#include "SourceGroupFactoryModuleTreeSitter.h"
 #if BOOST_OS_WINDOWS
 	#include <windows.h>
 #endif
@@ -144,7 +146,8 @@ void addLanguagePackages()
 #if BUILD_JAVA_LANGUAGE_PACKAGE
 	SourceGroupFactory::getInstance()->addModule(std::make_shared<SourceGroupFactoryModuleJava>());
 #endif
-
+	SourceGroupFactory::getInstance()->addModule(std::make_shared<SourceGroupFactoryModuleCsharp>());
+	SourceGroupFactory::getInstance()->addModule(std::make_shared<SourceGroupFactoryModuleTreeSitter>());
 #if BUILD_CXX_LANGUAGE_PACKAGE
 	LanguagePackageManager::getInstance()->addPackage(std::make_shared<LanguagePackageCxx>());
 #endif

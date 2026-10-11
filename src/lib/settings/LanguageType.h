@@ -17,6 +17,8 @@ enum class LanguageType
 #if BUILD_JAVA_LANGUAGE_PACKAGE
 	JAVA,
 #endif
+	CSHARP,
+	TREE_SITTER,
 	CUSTOM
 };
 
