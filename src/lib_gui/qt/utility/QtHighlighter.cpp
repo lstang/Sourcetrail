@@ -145,17 +145,7 @@ void QtHighlighter::highlightDocument()
 	QTextDocument* doc = document();
 
 	int docStart = 0;
-	int docEnd = 0;
-	for (int i = 0; i < doc->blockCount(); i++)
-	{
-		docEnd += doc->findBlockByLineNumber(i).length();
-	}
-
-	if (docEnd > 0)
-	{
-		docEnd -= 1;
-	}
-
+	int docEnd = doc->characterCount() > 0 ? doc->characterCount() - 1 : 0;
 	applyFormat(docStart, docEnd, s_charFormats[HighlightType::TEXT]);
 
 	m_highlightedLines.clear();
@@ -299,38 +289,39 @@ void QtHighlighter::createRanges(QTextDocument* doc, const std::vector<Highlight
 		}
 	}
 
-	// remove ranges starting inside others
+	// remove ranges starting inside others and ensure sorted order
 	{
-		std::map<std::pair<int, int>, size_t> sortedRangesToIndex;
-		for (size_t i = 0; i < m_singleLineRanges.size(); i++)
+		std::sort(m_singleLineRanges.begin(), m_singleLineRanges.end(),
+			[](const HighlightingRange& a, const HighlightingRange& b) {
+				if (a.start != b.start)
+				{
+					return a.start < b.start;
+				}
+				return a.end > b.end;
+			});
+
+		std::vector<HighlightingRange> nonOverlappingRanges;
+		nonOverlappingRanges.reserve(m_singleLineRanges.size());
+
+		int maxEnd = -1;
+		for (const auto& range: m_singleLineRanges)
 		{
-			const HighlightingRange& range = m_singleLineRanges[i];
-			sortedRangesToIndex.emplace(pair(range.start, range.end), i);
+			if (range.start > maxEnd)
+			{
+				nonOverlappingRanges.push_back(range);
+				maxEnd = range.end;
+			}
 		}
 
-		std::set<size_t> indicesToErase;
-		const std::pair<int, int>* topRange = nullptr;
-		for (const auto& p: sortedRangesToIndex)
-		{
-			if (topRange && p.first.first <= topRange->second)
-			{
-				indicesToErase.insert(p.second);
-			}
-			else
-			{
-				topRange = &p.first;
-			}
-		}
-
-		for (auto it = indicesToErase.rbegin(); it != indicesToErase.rend(); it++)
-		{
-			m_singleLineRanges.erase(m_singleLineRanges.begin() + *it);
-		}
+		m_singleLineRanges = std::move(nonOverlappingRanges);
 	}
 
 	m_multiLineRanges = createMultiLineRanges(doc, m_singleLineRanges);
+	std::sort(m_multiLineRanges.begin(), m_multiLineRanges.end(),
+		[](const HighlightingRange& a, const HighlightingRange& b) {
+			return a.start < b.start;
+		});
 }
-
 std::vector<QtHighlighter::HighlightingRange> QtHighlighter::createMultiLineRanges(
 	QTextDocument* doc, const std::vector<HighlightingRange> &ranges)
 {
@@ -417,13 +408,21 @@ QtHighlighter::HighlightingRule::HighlightingRule(
 
 bool QtHighlighter::isInRange(int pos, const std::vector<HighlightingRange> &ranges)
 {
-	for (const HighlightingRange& range: ranges)
+	if (ranges.empty())
 	{
-		if (pos >= range.start && pos <= range.end)
-		{
-			return true;
-		}
+		return false;
 	}
+
+	auto it = std::lower_bound(ranges.begin(), ranges.end(), pos,
+		[](const HighlightingRange& r, int p) {
+			return r.end < p;
+		});
+
+	if (it != ranges.end() && pos >= it->start && pos <= it->end)
+	{
+		return true;
+	}
+
 	return false;
 }
 
@@ -532,19 +531,24 @@ void QtHighlighter::formatBlockIfInRange(
 	int startPos = block.position();
 	int endPos = startPos + block.length() - 1;
 
-	if (s_charFormats.find(type) == s_charFormats.end())
+	if (s_charFormats.find(type) == s_charFormats.end() || ranges.empty())
 	{
 		return;
 	}
 
 	const QTextCharFormat& format = s_charFormats.find(type)->second;
 
-	for (auto range: ranges)
+	auto it = std::lower_bound(ranges.begin(), ranges.end(), startPos,
+		[](const HighlightingRange& r, int pos) {
+			return r.end < pos;
+		});
+
+	for (; it != ranges.end() && it->start <= endPos; ++it)
 	{
-		if (type == range.type)
+		if (type == it->type)
 		{
-			int start = std::max(range.start, startPos);
-			int end = std::min(range.end, endPos);
+			int start = std::max(it->start, startPos);
+			int end = std::min(it->end, endPos);
 
 			if (start <= end)
 			{
@@ -560,22 +564,31 @@ void QtHighlighter::formatBlockIfInRange(
 	int startPos = block.position();
 	int endPos = startPos + block.length() - 1;
 
-	for (auto range: ranges)
+	if (ranges.empty())
 	{
-		HighlightType type = range.type;
-		if (s_charFormats.find(type) == s_charFormats.end())
+		return;
+	}
+
+	auto it = std::lower_bound(ranges.begin(), ranges.end(), startPos,
+		[](const HighlightingRange& r, int pos) {
+			return r.end < pos;
+		});
+
+	for (; it != ranges.end() && it->start <= endPos; ++it)
+	{
+		HighlightType type = it->type;
+		auto formatIt = s_charFormats.find(type);
+		if (formatIt == s_charFormats.end())
 		{
 			continue;
 		}
 
-		const QTextCharFormat& format = s_charFormats.find(type)->second;
-
-		int start = std::max(range.start, startPos);
-		int end = std::min(range.end, endPos);
+		int start = std::max(it->start, startPos);
+		int end = std::min(it->end, endPos);
 
 		if (start <= end)
 		{
-			applyFormat(start, end, format);
+			applyFormat(start, end, formatIt->second);
 		}
 	}
 }

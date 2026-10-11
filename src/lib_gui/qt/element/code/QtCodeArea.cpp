@@ -117,15 +117,9 @@ QtCodeArea::~QtCodeArea()
 
 QSize QtCodeArea::sizeHint() const
 {
-	double height = 0;
-	double width = 0;
-
-	for (QTextBlock block = document()->firstBlock(); block.isValid(); block = block.next())
-	{
-		QRectF rect = blockBoundingGeometry(block);
-		height += rect.height();
-		width = std::max(rect.width(), width);
-	}
+	QSizeF docSize = document()->documentLayout()->documentSize();
+	double height = docSize.height();
+	double width = docSize.width();
 
 	if (horizontalScrollBar()->minimum() != horizontalScrollBar()->maximum() &&
 		!utility::Platform::isMac())
