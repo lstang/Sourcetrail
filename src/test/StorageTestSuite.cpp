@@ -4,7 +4,10 @@
 
 #include "IntermediateStorage.h"
 #include "PersistentStorage.h"
+#include "SqliteIndexStorage.h"
 #include "CodemapImporter.h"
+#include "Graph.h"
+#include "Node.h"
 
 namespace
 {
@@ -302,5 +305,34 @@ TEST_CASE("codemap importer loads existing companion project")
 		REQUIRE(!result.empty());
 		REQUIRE(result.exists());
 		REQUIRE(result.fileName() == "codegraph_test.srctrlprj");
+	}
+}
+
+TEST_CASE("codemap getGraphForAll returns classes and modules")
+{
+	FilePath testDb("F:/bitbucket/bitbucket/bitbucket_repo/sw_mbi_cbv9/.codegraph/codegraph.srctrldb");
+	if (testDb.exists())
+	{
+		PersistentStorage storage(testDb, FilePath());
+		storage.setup();
+		storage.buildCaches();
+
+		std::shared_ptr<Graph> graph = storage.getGraphForAll();
+		size_t fileCount = 0;
+		size_t classCount = 0;
+		size_t moduleCount = 0;
+		size_t namespaceCount = 0;
+		size_t functionCount = 0;
+
+		graph->forEachNode([&](Node* node) {
+			if (node->getType().isFile()) fileCount++;
+			else if (node->getType().getKind() == NODE_CLASS) classCount++;
+			else if (node->getType().getKind() == NODE_MODULE) moduleCount++;
+			else if (node->getType().getKind() == NODE_NAMESPACE) namespaceCount++;
+			else if (node->getType().getKind() == NODE_FUNCTION) functionCount++;
+		});
+		REQUIRE(fileCount > 0);
+		REQUIRE(classCount > 0);
+		REQUIRE(moduleCount > 0);
 	}
 }

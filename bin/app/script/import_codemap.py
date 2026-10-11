@@ -92,6 +92,9 @@ EDGE_MAP = {
     'imports_from': 512,  # EDGE_IMPORT
     'overrides': 32,      # EDGE_OVERRIDE
 }
+DEFINITION_IMPLICIT = 1
+DEFINITION_EXPLICIT = 2
+
 
 def create_srctrl_schema(cursor):
     cursor.executescript('''
@@ -217,7 +220,7 @@ def convert_codegraph_db(src_db_path, out_prj_path, out_db_path):
                 sname = serialize_name(top_dir, delimiter='.')
                 element_batch.append((mid,))
                 node_batch.append((mid, 8, sname))  # NODE_MODULE = 8
-                symbol_batch.append((mid, 1))
+                symbol_batch.append((mid, DEFINITION_EXPLICIT))
     print(f"Created {len(module_node_map)} project module nodes.")
     print("Fetching nodes...")
     c_src.execute("SELECT id, kind, name, qualified_name, file_path, start_line, end_line, start_column, end_column, visibility FROM nodes")
@@ -243,7 +246,7 @@ def convert_codegraph_db(src_db_path, out_prj_path, out_db_path):
 
         element_batch.append((nid,))
         node_batch.append((nid, ntype, sname))
-        symbol_batch.append((nid, 1))
+        symbol_batch.append((nid, DEFINITION_EXPLICIT))
 
         if vis:
             v = vis.lower()
@@ -385,7 +388,7 @@ def convert_graphify_json(src_json_path, out_prj_path, out_db_path):
                 sname = serialize_name(top_dir, delimiter='.')
                 element_batch.append((mid,))
                 node_batch.append((mid, 8, sname))  # NODE_MODULE = 8
-                symbol_batch.append((mid, 1))
+                symbol_batch.append((mid, DEFINITION_EXPLICIT))
     print(f"Created {len(module_node_map)} project module nodes in graphify.")
 
     # 2. Register nodes
@@ -408,7 +411,7 @@ def convert_graphify_json(src_json_path, out_prj_path, out_db_path):
 
         element_batch.append((nid,))
         node_batch.append((nid, ntype, sname))
-        symbol_batch.append((nid, 1))
+        symbol_batch.append((nid, DEFINITION_EXPLICIT))
 
         sf = n.get('source_file')
         file_nid = file_node_map.get(sf)
