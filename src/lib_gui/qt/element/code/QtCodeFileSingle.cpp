@@ -1,11 +1,15 @@
 #include "QtCodeFileSingle.h"
 
+#include <algorithm>
+#include <cmath>
 #include <QLabel>
+#include <QPropertyAnimation>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QVBoxLayout>
 
+#include "ApplicationSettings.h"
 #include "FilePath.h"
 #include "MessageChangeFileView.h"
 #include "QtCodeArea.h"
@@ -208,10 +212,81 @@ void QtCodeFileSingle::scrollTo(
 		}
 	}
 
-	double percentA = double(lineNumber - 1) / m_area->getEndLineNumber();
-	double percentB = endLineNumber ? double(endLineNumber - 1) / m_area->getEndLineNumber() : 0.0f;
-	ensurePercentVisibleAnimated(percentA, percentB, animated, target);
+	QScrollBar* scrollBar = m_area->verticalScrollBar();
+	if (scrollBar && lineNumber > 0)
+	{
+		const int lineSpacing = m_area->fontMetrics().lineSpacing();
+		const int visibleHeight = m_area->viewport()->height();
+		const int visibleLines = (lineSpacing > 0 && visibleHeight > 0)
+			? std::max(1, visibleHeight / lineSpacing)
+			: 20;
 
+		const int targetLine = static_cast<int>(lineNumber) - 1; // 0-based block index
+		int targetValue = targetLine;
+
+		const int spanLines = (endLineNumber > lineNumber)
+			? static_cast<int>(endLineNumber - lineNumber + 1)
+			: 1;
+
+		constexpr int margin = 2;
+
+		switch (target)
+		{
+		case CodeScrollParams::Target::VISIBLE:
+		{
+			const int currentTop = scrollBar->value();
+			const int currentBottom = currentTop + visibleLines - 1;
+
+			if (targetLine >= currentTop + margin && targetLine <= currentBottom - margin)
+			{
+				targetValue = currentTop; // already comfortably visible
+			}
+			else if (targetLine < currentTop + margin)
+			{
+				targetValue = std::max(0, targetLine - margin);
+			}
+			else
+			{
+				targetValue = targetLine - visibleLines + 1 + margin;
+			}
+			break;
+		}
+		case CodeScrollParams::Target::CENTER:
+		{
+			if (spanLines < visibleLines)
+			{
+				targetValue = targetLine + (spanLines / 2) - (visibleLines / 2);
+			}
+			else
+			{
+				targetValue = targetLine - margin;
+			}
+			break;
+		}
+		case CodeScrollParams::Target::TOP:
+		{
+			targetValue = targetLine - margin;
+			break;
+		}
+		}
+
+		targetValue = std::clamp(targetValue, scrollBar->minimum(), scrollBar->maximum());
+
+		if (animated && ApplicationSettings::getInstance()->getUseAnimations() && m_area->isVisible() &&
+			std::abs(scrollBar->value() - targetValue) > 1)
+		{
+			QPropertyAnimation* anim = new QPropertyAnimation(scrollBar, "value");
+			anim->setDuration(300);
+			anim->setStartValue(scrollBar->value());
+			anim->setEndValue(targetValue);
+			anim->setEasingCurve(QEasingCurve::InOutQuad);
+			anim->start(QAbstractAnimation::DeleteWhenStopped);
+		}
+		else
+		{
+			scrollBar->setValue(targetValue);
+		}
+	}
 	m_area->ensureLocationIdVisible(targetLocationId, width(), animated);
 
 	if (focusTarget && locationId)

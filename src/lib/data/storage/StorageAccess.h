@@ -84,6 +84,9 @@ public:
 	virtual std::shared_ptr<SourceLocationCollection> getSourceLocationsForLocationIds(
 		const std::vector<Id>& locationIds) const = 0;
 
+	virtual std::map<Id, size_t> getCallerCountsForTokenIds(const std::vector<Id>&  /*tokenIds*/) const { return {}; }
+	virtual std::map<Id, size_t> getCalleeCountsForTokenIds(const std::vector<Id>&  /*tokenIds*/) const { return {}; }
+
 	virtual std::shared_ptr<SourceLocationFile> getSourceLocationsForFile(
 		const FilePath& filePath) const = 0;
 	virtual std::shared_ptr<SourceLocationFile> getSourceLocationsForLinesInFile(

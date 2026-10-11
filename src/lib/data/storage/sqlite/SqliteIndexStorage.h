@@ -96,6 +96,9 @@ public:
 	std::vector<StorageEdge> getEdgesByTargetType(Id targetId, int type) const;
 	std::vector<StorageEdge> getEdgesByTargetsType(const std::vector<Id>& targetIds, int type) const;
 
+	std::map<Id, size_t> getCallerCountsForTokenIds(const std::vector<Id>& tokenIds) const;
+	std::map<Id, size_t> getCalleeCountsForTokenIds(const std::vector<Id>& tokenIds) const;
+
 	StorageNode getNodeById(Id id) const;
 	StorageNode getNodeBySerializedName(const std::string& serializedName) const;
 	

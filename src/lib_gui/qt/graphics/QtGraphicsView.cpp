@@ -1,5 +1,8 @@
 #include "QtGraphicsView.h"
 
+#include <QActionGroup>
+#include "MessageRefreshUI.h"
+#include "NodeOrderType.h"
 #include "ApplicationSettings.h"
 #include "GraphFocusHandler.h"
 #include "MessageActivateLegend.h"
@@ -519,6 +522,32 @@ void QtGraphicsView::contextMenuEvent(QContextMenuEvent* event)
 	menu.addAction(m_exportGraphAction);
 	menu.addAction(m_copyGraphAction);
 
+
+	menu.addSeparator();
+
+	QMenu* orderMenu = new QMenu(tr("Order Nodes By"), this);
+	QActionGroup* orderGroup = new QActionGroup(orderMenu);
+	orderGroup->setExclusive(true);
+
+	auto addOrderAction = [orderMenu, orderGroup](const QString& text, NodeOrderType orderType) {
+		QAction* action = orderMenu->addAction(text);
+		action->setCheckable(true);
+		action->setChecked(ApplicationSettings::getInstance()->getGraphNodeOrderType() == orderType);
+		orderGroup->addAction(action);
+		QObject::connect(action, &QAction::triggered, [orderType]() {
+			ApplicationSettings::getInstance()->setGraphNodeOrderType(orderType);
+			ApplicationSettings::getInstance()->save();
+			MessageRefreshUI().noStyleReload().dispatch();
+		});
+	};
+
+	addOrderAction(tr("Name"), NodeOrderType::BY_NAME);
+	addOrderAction(tr("Lines of Code"), NodeOrderType::BY_LINES_OF_CODE);
+	addOrderAction(tr("Number of Callers"), NodeOrderType::BY_CALLERS);
+	addOrderAction(tr("Number of Callees"), NodeOrderType::BY_CALLEES);
+	addOrderAction(tr("Total Callers + Callees"), NodeOrderType::BY_CALLERS_AND_CALLEES);
+
+	menu.addMenu(orderMenu);
 	menu.addSeparator();
 	menu.addAction(m_copyNodeNameAction);
 	menu.addFileActions(clipboardFilePath);

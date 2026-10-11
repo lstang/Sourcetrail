@@ -33,6 +33,16 @@ void QtContextMenu::addAction(QAction* action)
 	m_menu.addAction(action);
 }
 
+void QtContextMenu::addMenu(QMenu* menu)
+{
+	m_menu.addMenu(menu);
+}
+
+QMenu* QtContextMenu::addMenu(const QString& title)
+{
+	return m_menu.addMenu(title);
+}
+
 void QtContextMenu::enableUndo(bool enabled)
 {
 	s_undoAction->setEnabled(enabled);

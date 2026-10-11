@@ -92,6 +92,7 @@ private:
 	std::vector<std::shared_ptr<DummyNode>> createDummyNodeTopDown(Node* node, Id ancestorId);
 
 	void updateDummyNodeNamesAndAddQualifiers(const std::vector<std::shared_ptr<DummyNode>>& dummyNodes);
+	void updateDummyNodeMetrics(const std::vector<std::shared_ptr<DummyNode>>& dummyNodes);
 
 	std::vector<Id> getExpandedNodeIds() const;
 	void setExpandedNodeIds(const std::vector<Id>& nodeIds);

@@ -16,6 +16,8 @@ public:
 	QtContextMenu(QContextMenuEvent* event, QWidget* origin);
 
 	void addAction(QAction* action);
+	void addMenu(QMenu* menu);
+	QMenu* addMenu(const QString& title);
 	void addUndoActions();
 	void addFileActions(const FilePath& filePath);
 

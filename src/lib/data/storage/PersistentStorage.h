@@ -152,6 +152,11 @@ public:
 	std::shared_ptr<SourceLocationCollection> getSourceLocationsForLocationIds(
 		const std::vector<Id>& locationIds) const override;
 
+	std::map<Id, size_t> getCallerCountsForTokenIds(
+		const std::vector<Id>& tokenIds) const override;
+	std::map<Id, size_t> getCalleeCountsForTokenIds(
+		const std::vector<Id>& tokenIds) const override;
+
 	std::shared_ptr<SourceLocationFile> getSourceLocationsForFile(const FilePath& filePath) const override;
 	std::shared_ptr<SourceLocationFile> getSourceLocationsForLinesInFile(
 		const FilePath& filePath, size_t startLine, size_t endLine) const override;

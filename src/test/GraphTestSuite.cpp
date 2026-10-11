@@ -1,6 +1,8 @@
 #include "Catch2.hpp"
 
 #include "Graph.h"
+#include "DummyNode.h"
+#include "NodeOrderType.h"
 
 namespace
 {
@@ -323,4 +325,132 @@ TEST_CASE("graph removes nodes")
 	graph.removeNode(graph.getNodeById(a->getId()));
 
 	REQUIRE(1 == graph.getNodeCount());
+}
+
+TEST_CASE("dummy node ordering by name")
+{
+	auto a = std::make_shared<DummyNode>(DummyNode::DUMMY_DATA);
+	a->name = "Beta";
+	a->tokenId = 1;
+
+	auto b = std::make_shared<DummyNode>(DummyNode::DUMMY_DATA);
+	b->name = "Alpha";
+	b->tokenId = 2;
+
+	REQUIRE(!DummyNode::compareNodes(a, b, NodeOrderType::BY_NAME));
+	REQUIRE(DummyNode::compareNodes(b, a, NodeOrderType::BY_NAME));
+}
+
+TEST_CASE("dummy node ordering by lines of code")
+{
+	auto a = std::make_shared<DummyNode>(DummyNode::DUMMY_DATA);
+	a->name = "ShortMethod";
+	a->lineCount = 10;
+	a->tokenId = 1;
+
+	auto b = std::make_shared<DummyNode>(DummyNode::DUMMY_DATA);
+	b->name = "LongMethod";
+	b->lineCount = 250;
+	b->tokenId = 2;
+
+	// Higher lines of code comes first (descending)
+	REQUIRE(DummyNode::compareNodes(b, a, NodeOrderType::BY_LINES_OF_CODE));
+	REQUIRE(!DummyNode::compareNodes(a, b, NodeOrderType::BY_LINES_OF_CODE));
+}
+
+TEST_CASE("dummy node ordering by callers")
+{
+	auto a = std::make_shared<DummyNode>(DummyNode::DUMMY_DATA);
+	a->name = "PopularMethod";
+	a->callerCount = 50;
+	a->tokenId = 1;
+
+	auto b = std::make_shared<DummyNode>(DummyNode::DUMMY_DATA);
+	b->name = "RareMethod";
+	b->callerCount = 2;
+	b->tokenId = 2;
+
+	REQUIRE(DummyNode::compareNodes(a, b, NodeOrderType::BY_CALLERS));
+	REQUIRE(!DummyNode::compareNodes(b, a, NodeOrderType::BY_CALLERS));
+}
+
+TEST_CASE("dummy node ordering by callees")
+{
+	auto a = std::make_shared<DummyNode>(DummyNode::DUMMY_DATA);
+	a->name = "LeafMethod";
+	a->calleeCount = 0;
+	a->tokenId = 1;
+
+	auto b = std::make_shared<DummyNode>(DummyNode::DUMMY_DATA);
+	b->name = "OrchestratorMethod";
+	b->calleeCount = 35;
+	b->tokenId = 2;
+
+	REQUIRE(DummyNode::compareNodes(b, a, NodeOrderType::BY_CALLEES));
+	REQUIRE(!DummyNode::compareNodes(a, b, NodeOrderType::BY_CALLEES));
+}
+
+TEST_CASE("dummy node ordering by callers and callees")
+{
+	auto a = std::make_shared<DummyNode>(DummyNode::DUMMY_DATA);
+	a->name = "CentralNode";
+	a->callerCount = 20;
+	a->calleeCount = 15; // total 35
+	a->tokenId = 1;
+
+	auto b = std::make_shared<DummyNode>(DummyNode::DUMMY_DATA);
+	b->name = "PeripheralNode";
+	b->callerCount = 5;
+	b->calleeCount = 5; // total 10
+	b->tokenId = 2;
+
+	REQUIRE(DummyNode::compareNodes(a, b, NodeOrderType::BY_CALLERS_AND_CALLEES));
+	REQUIRE(!DummyNode::compareNodes(b, a, NodeOrderType::BY_CALLERS_AND_CALLEES));
+}
+
+TEST_CASE("dummy node sortSubNodes with different criteria")
+{
+	auto parent = std::make_shared<DummyNode>(DummyNode::DUMMY_DATA);
+	parent->name = "Class";
+
+	auto m1 = std::make_shared<DummyNode>(DummyNode::DUMMY_DATA);
+	m1->name = "Zeta";
+	m1->lineCount = 100;
+	m1->callerCount = 1;
+	m1->calleeCount = 20;
+	m1->tokenId = 1;
+
+	auto m2 = std::make_shared<DummyNode>(DummyNode::DUMMY_DATA);
+	m2->name = "Alpha";
+	m2->lineCount = 20;
+	m2->callerCount = 50;
+	m2->calleeCount = 2;
+	m2->tokenId = 2;
+
+	parent->subNodes = {m1, m2};
+
+	// By Name: Alpha, then Zeta
+	parent->sortSubNodes(NodeOrderType::BY_NAME);
+	REQUIRE(parent->subNodes[0]->name == "Alpha");
+	REQUIRE(parent->subNodes[1]->name == "Zeta");
+
+	// By Lines of Code: Zeta (100), then Alpha (20)
+	parent->sortSubNodes(NodeOrderType::BY_LINES_OF_CODE);
+	REQUIRE(parent->subNodes[0]->name == "Zeta");
+	REQUIRE(parent->subNodes[1]->name == "Alpha");
+
+	// By Callers: Alpha (50), then Zeta (1)
+	parent->sortSubNodes(NodeOrderType::BY_CALLERS);
+	REQUIRE(parent->subNodes[0]->name == "Alpha");
+	REQUIRE(parent->subNodes[1]->name == "Zeta");
+
+	// By Callees: Zeta (20), then Alpha (2)
+	parent->sortSubNodes(NodeOrderType::BY_CALLEES);
+	REQUIRE(parent->subNodes[0]->name == "Zeta");
+	REQUIRE(parent->subNodes[1]->name == "Alpha");
+
+	// By Callers + Callees: Alpha (52), then Zeta (21)
+	parent->sortSubNodes(NodeOrderType::BY_CALLERS_AND_CALLEES);
+	REQUIRE(parent->subNodes[0]->name == "Alpha");
+	REQUIRE(parent->subNodes[1]->name == "Zeta");
 }

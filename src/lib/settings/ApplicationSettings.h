@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "GroupType.h"
+#include "NodeOrderType.h"
 #include "Settings.h"
 
 class TimeStamp;
@@ -66,6 +67,9 @@ public:
 
 	GroupType getGraphGrouping() const;
 	void setGraphGrouping(GroupType type);
+
+	NodeOrderType getGraphNodeOrderType() const;
+	void setGraphNodeOrderType(NodeOrderType orderType);
 
 	// screen
 	int getScreenAutoScaling() const;

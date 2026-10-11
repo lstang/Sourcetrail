@@ -217,6 +217,25 @@ DEF_GETTER_1(
 	const std::vector<Id>&,
 	std::shared_ptr<SourceLocationCollection>,
 	std::make_shared<SourceLocationCollection>())
+std::map<Id, size_t> StorageAccessProxy::getCallerCountsForTokenIds(
+	const std::vector<Id>& tokenIds) const
+{
+	if (std::shared_ptr<StorageAccess> subject = m_subject.lock())
+	{
+		return subject->getCallerCountsForTokenIds(tokenIds);
+	}
+	return {};
+}
+
+std::map<Id, size_t> StorageAccessProxy::getCalleeCountsForTokenIds(
+	const std::vector<Id>& tokenIds) const
+{
+	if (std::shared_ptr<StorageAccess> subject = m_subject.lock())
+	{
+		return subject->getCalleeCountsForTokenIds(tokenIds);
+	}
+	return {};
+}
 DEF_GETTER_1(
 	getSourceLocationsForFile,
 	const FilePath&,

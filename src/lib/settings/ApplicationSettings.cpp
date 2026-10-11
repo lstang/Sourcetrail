@@ -198,6 +198,17 @@ void ApplicationSettings::setGraphGrouping(GroupType type)
 	setValue<std::string>("application/graph_grouping", groupTypeToString(type));
 }
 
+NodeOrderType ApplicationSettings::getGraphNodeOrderType() const
+{
+	return stringToNodeOrderType(
+		getValue<std::string>("application/graph_node_order", nodeOrderTypeToString(NodeOrderType::BY_NAME)));
+}
+
+void ApplicationSettings::setGraphNodeOrderType(NodeOrderType orderType)
+{
+	setValue<std::string>("application/graph_node_order", nodeOrderTypeToString(orderType));
+}
+
 int ApplicationSettings::getScreenAutoScaling() const
 {
 	return getValue<int>("screen/auto_scaling", 1);

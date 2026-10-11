@@ -752,6 +752,60 @@ std::vector<StorageEdge> SqliteIndexStorage::getEdgesByTargetsType(
 		std::to_string(type));
 }
 
+std::map<Id, size_t> SqliteIndexStorage::getCallerCountsForTokenIds(const std::vector<Id>& tokenIds) const
+{
+	std::map<Id, size_t> counts;
+	if (tokenIds.empty())
+	{
+		return counts;
+	}
+
+	for (size_t i = 0; i < tokenIds.size(); i += 500)
+	{
+		size_t end = std::min(i + 500, tokenIds.size());
+		std::vector<Id> chunk(tokenIds.begin() + i, tokenIds.begin() + end);
+		std::string query =
+			"SELECT target_node_id, COUNT(*) FROM edge WHERE type = 8 AND target_node_id IN (" +
+			utility::join(utility::toStrings(chunk), ',') + ") GROUP BY target_node_id;";
+
+		CppSQLite3Query result = m_database.execQuery(query.c_str());
+		while (!result.eof())
+		{
+			counts.emplace(static_cast<Id>(result.getIntField(0)), static_cast<size_t>(result.getIntField(1)));
+			result.nextRow();
+		}
+	}
+
+	return counts;
+}
+
+std::map<Id, size_t> SqliteIndexStorage::getCalleeCountsForTokenIds(const std::vector<Id>& tokenIds) const
+{
+	std::map<Id, size_t> counts;
+	if (tokenIds.empty())
+	{
+		return counts;
+	}
+
+	for (size_t i = 0; i < tokenIds.size(); i += 500)
+	{
+		size_t end = std::min(i + 500, tokenIds.size());
+		std::vector<Id> chunk(tokenIds.begin() + i, tokenIds.begin() + end);
+		std::string query =
+			"SELECT source_node_id, COUNT(*) FROM edge WHERE type = 8 AND source_node_id IN (" +
+			utility::join(utility::toStrings(chunk), ',') + ") GROUP BY source_node_id;";
+
+		CppSQLite3Query result = m_database.execQuery(query.c_str());
+		while (!result.eof())
+		{
+			counts.emplace(static_cast<Id>(result.getIntField(0)), static_cast<size_t>(result.getIntField(1)));
+			result.nextRow();
+		}
+	}
+
+	return counts;
+}
+
 StorageNode SqliteIndexStorage::getNodeById(Id id) const
 {
 	std::vector<StorageNode> candidates = doGetAll<StorageNode>("WHERE id = " + to_string(id));

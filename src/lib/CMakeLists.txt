@@ -166,6 +166,8 @@ add_library(Sourcetrail_lib
 	data/graph/Graph.h
 	data/graph/Node.cpp
 	data/graph/Node.h
+	data/graph/NodeOrderType.cpp
+	data/graph/NodeOrderType.h
 	data/graph/Token.cpp
 	data/graph/Token.h
 

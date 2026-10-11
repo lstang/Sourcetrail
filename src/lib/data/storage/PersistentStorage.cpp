@@ -1594,6 +1594,16 @@ std::vector<Id> PersistentStorage::getNodeIdsForLocationIds(const std::vector<Id
 	return utility::toVector(implicitNodeIds);
 }
 
+std::map<Id, size_t> PersistentStorage::getCallerCountsForTokenIds(const std::vector<Id>& tokenIds) const
+{
+	return m_sqliteIndexStorage.getCallerCountsForTokenIds(tokenIds);
+}
+
+std::map<Id, size_t> PersistentStorage::getCalleeCountsForTokenIds(const std::vector<Id>& tokenIds) const
+{
+	return m_sqliteIndexStorage.getCalleeCountsForTokenIds(tokenIds);
+}
+
 std::shared_ptr<SourceLocationCollection> PersistentStorage::getSourceLocationsForTokenIds(
 	const std::vector<Id>& tokenIds) const
 {

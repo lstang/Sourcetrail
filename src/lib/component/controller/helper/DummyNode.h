@@ -10,6 +10,8 @@
 #include "GroupType.h"
 #include "NameHierarchy.h"
 #include "Node.h"
+#include "ApplicationSettings.h"
+#include "NodeOrderType.h"
 
 // temporary data structure for (visual) graph creation process
 struct DummyNode
@@ -28,7 +30,7 @@ public:
 
 	struct DummyNodeComp
 	{
-		bool operator()(const std::shared_ptr<DummyNode> a, const std::shared_ptr<DummyNode> b) const
+		bool operator()(const std::shared_ptr<DummyNode>& a, const std::shared_ptr<DummyNode>& b) const
 		{
 			if (a->bundleId != b->bundleId)
 			{
@@ -39,7 +41,8 @@ public:
 				return a->isBundleNode();
 			}
 
-			return utility::isCaseInsensitiveLess(a->name, b->name);
+			return DummyNode::compareNodes(
+				a, b, ApplicationSettings::getInstance()->getGraphNodeOrderType());
 		}
 	};
 
@@ -392,14 +395,121 @@ public:
 		subNodes.insert(subNodes.end(), accessNodes.begin(), accessNodes.end());
 	}
 
-	void sortSubNodesByName()
+	size_t getLineCount() const
 	{
+		if (lineCount > 0)
+		{
+			return lineCount;
+		}
+		size_t sum = 0;
+		for (const auto& sub : subNodes)
+		{
+			sum += sub->getLineCount();
+		}
+		return sum;
+	}
+
+	size_t getCallerCount() const
+	{
+		if (callerCount > 0)
+		{
+			return callerCount;
+		}
+		size_t sum = 0;
+		for (const auto& sub : subNodes)
+		{
+			sum += sub->getCallerCount();
+		}
+		return sum;
+	}
+
+	size_t getCalleeCount() const
+	{
+		if (calleeCount > 0)
+		{
+			return calleeCount;
+		}
+		size_t sum = 0;
+		for (const auto& sub : subNodes)
+		{
+			sum += sub->getCalleeCount();
+		}
+		return sum;
+	}
+
+	size_t getTotalCallCount() const
+	{
+		return getCallerCount() + getCalleeCount();
+	}
+
+	static bool compareNodes(
+		const std::shared_ptr<DummyNode>& a,
+		const std::shared_ptr<DummyNode>& b,
+		NodeOrderType order)
+	{
+		switch (order)
+		{
+		case NodeOrderType::BY_LINES_OF_CODE:
+			if (a->getLineCount() != b->getLineCount())
+			{
+				return a->getLineCount() > b->getLineCount();
+			}
+			break;
+		case NodeOrderType::BY_CALLERS:
+			if (a->getCallerCount() != b->getCallerCount())
+			{
+				return a->getCallerCount() > b->getCallerCount();
+			}
+			break;
+		case NodeOrderType::BY_CALLEES:
+			if (a->getCalleeCount() != b->getCalleeCount())
+			{
+				return a->getCalleeCount() > b->getCalleeCount();
+			}
+			break;
+		case NodeOrderType::BY_CALLERS_AND_CALLEES:
+			if (a->getTotalCallCount() != b->getTotalCallCount())
+			{
+				return a->getTotalCallCount() > b->getTotalCallCount();
+			}
+			break;
+		case NodeOrderType::BY_NAME:
+		default:
+			break;
+		}
+
+		if (utility::isCaseInsensitiveLess(a->name, b->name))
+		{
+			return true;
+		}
+		if (utility::isCaseInsensitiveLess(b->name, a->name))
+		{
+			return false;
+		}
+		return a->tokenId < b->tokenId;
+	}
+
+	void sortSubNodes(NodeOrderType order)
+	{
+		for (auto& subNode : subNodes)
+		{
+			if (subNode->isAccessNode() || subNode->isGroupNode())
+			{
+				subNode->sortSubNodes(order);
+			}
+		}
+
 		std::sort(
 			subNodes.begin(),
 			subNodes.end(),
-			[](const std::shared_ptr<DummyNode>& a, const std::shared_ptr<DummyNode>& b) -> bool {
-				return a->name < b->name;
+			[order](const std::shared_ptr<DummyNode>& a, const std::shared_ptr<DummyNode>& b) -> bool {
+				return DummyNode::compareNodes(a, b, order);
 			});
+	}
+
+	void sortSubNodesByName()
+	{
+		sortSubNodes(ApplicationSettings::getInstance()->getGraphNodeOrderType());
 	}
 
 	bool getsLayouted() const
@@ -445,6 +555,10 @@ public:
 	// GraphNode
 	const Node* data = nullptr;
 	std::string name;
+
+	size_t lineCount = 0;
+	size_t callerCount = 0;
+	size_t calleeCount = 0;
 
 	bool active = false;
 	bool connected = false;

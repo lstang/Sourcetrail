@@ -12,6 +12,8 @@
 #include "ListLayouter.h"
 #include "MessageActivateNodes.h"
 #include "MessageStatus.h"
+#include "SourceLocation.h"
+#include "SourceLocationCollection.h"
 #include "StorageAccess.h"
 #include "TokenComponentAccess.h"
 #include "TokenComponentFilePath.h"
@@ -689,6 +691,15 @@ void GraphController::createDummyGraph(const std::shared_ptr<Graph> graph)
 	});
 
 	updateDummyNodeNamesAndAddQualifiers(dummyNodes);
+	updateDummyNodeMetrics(dummyNodes);
+
+	NodeOrderType order = ApplicationSettings::getInstance()->getGraphNodeOrderType();
+	std::sort(
+		dummyNodes.begin(),
+		dummyNodes.end(),
+		[order](const std::shared_ptr<DummyNode>& a, const std::shared_ptr<DummyNode>& b) {
+			return DummyNode::compareNodes(a, b, order);
+		});
 
 	m_dummyNodes = dummyNodes;
 	m_graph = graph;
@@ -736,6 +747,24 @@ std::vector<std::shared_ptr<DummyNode>> GraphController::createDummyNodeTopDown(
 
 	m_dummyGraphNodes.emplace(result->data->getId(), result);
 	nodes.push_back(result);
+	size_t callers = 0;
+	size_t callees = 0;
+	node->forEachEdge([&callers, &callees, node](Edge* edge) {
+		if (edge->isType(Edge::EDGE_CALL))
+		{
+			if (edge->getTo() == node)
+			{
+				callers++;
+			}
+			if (edge->getFrom() == node)
+			{
+				callees++;
+			}
+		}
+	});
+	result->callerCount = callers;
+	result->calleeCount = callees;
+
 
 	if (node->getType().isPackage())
 	{
@@ -809,6 +838,88 @@ void GraphController::updateDummyNodeNamesAndAddQualifiers(
 
 				node->subNodes.push_back(qualifierNode);
 				node->qualifierName = qualifier;
+			}
+		}
+	}
+}
+
+void GraphController::updateDummyNodeMetrics(
+	const std::vector<std::shared_ptr<DummyNode>>& dummyNodes)
+{
+	std::vector<Id> tokenIds;
+	std::map<Id, std::vector<std::shared_ptr<DummyNode>>> nodeMap;
+
+	std::function<void(const std::shared_ptr<DummyNode>&)> collectNodes =
+		[&](const std::shared_ptr<DummyNode>& node) {
+			if (node->tokenId)
+			{
+				tokenIds.push_back(node->tokenId);
+				nodeMap[node->tokenId].push_back(node);
+			}
+			for (const auto& sub : node->subNodes)
+			{
+				collectNodes(sub);
+			}
+		};
+
+	for (const auto& node : dummyNodes)
+	{
+		collectNodes(node);
+	}
+
+	if (m_storageAccess && !tokenIds.empty())
+	{
+		std::shared_ptr<SourceLocationCollection> locs =
+			m_storageAccess->getSourceLocationsForTokenIds(tokenIds);
+		if (locs)
+		{
+			locs->forEachSourceLocation([&nodeMap](SourceLocation* loc) {
+				if (loc->isScopeLocation())
+				{
+					const SourceLocation* start = loc->getStartLocation();
+					const SourceLocation* end = loc->getEndLocation();
+					if (start && end && end->getLineNumber() >= start->getLineNumber())
+					{
+						size_t count = end->getLineNumber() - start->getLineNumber() + 1;
+						for (Id id : loc->getTokenIds())
+						{
+							auto it = nodeMap.find(id);
+							if (it != nodeMap.end())
+							{
+								for (auto& node : it->second)
+								{
+									node->lineCount = std::max(node->lineCount, count);
+								}
+							}
+						}
+					}
+				}
+			});
+		}
+
+		std::map<Id, size_t> dbCallerCounts = m_storageAccess->getCallerCountsForTokenIds(tokenIds);
+		for (const auto& p : dbCallerCounts)
+		{
+			auto it = nodeMap.find(p.first);
+			if (it != nodeMap.end())
+			{
+				for (auto& node : it->second)
+				{
+					node->callerCount = std::max(node->callerCount, p.second);
+				}
+			}
+		}
+
+		std::map<Id, size_t> dbCalleeCounts = m_storageAccess->getCalleeCountsForTokenIds(tokenIds);
+		for (const auto& p : dbCalleeCounts)
+		{
+			auto it = nodeMap.find(p.first);
+			if (it != nodeMap.end())
+			{
+				for (auto& node : it->second)
+				{
+					node->calleeCount = std::max(node->calleeCount, p.second);
+				}
 			}
 		}
 	}
@@ -1852,6 +1963,12 @@ void GraphController::groupTrailNodes(GroupType groupType)
 void GraphController::layoutNesting()
 {
 	TRACE();
+	NodeOrderType order = ApplicationSettings::getInstance()->getGraphNodeOrderType();
+	for (const std::shared_ptr<DummyNode>& node: m_dummyNodes)
+	{
+		node->sortSubNodes(order);
+	}
+
 
 	extendEqualFunctionNames(m_dummyNodes);
 
@@ -2194,6 +2311,14 @@ void GraphController::layoutToGrid(DummyNode* node)
 void GraphController::layoutGraph(bool getSortedNodes)
 {
 	TRACE();
+	NodeOrderType order = ApplicationSettings::getInstance()->getGraphNodeOrderType();
+	std::sort(
+		m_dummyNodes.begin(),
+		m_dummyNodes.end(),
+		[order](const std::shared_ptr<DummyNode>& a, const std::shared_ptr<DummyNode>& b) {
+			return DummyNode::compareNodes(a, b, order);
+		});
+
 
 	std::vector<std::shared_ptr<DummyNode>> visibleNodes;
 	for (const auto &node: m_dummyNodes)
@@ -2217,6 +2342,14 @@ void GraphController::layoutGraph(bool getSortedNodes)
 void GraphController::layoutList()
 {
 	TRACE();
+	NodeOrderType order = ApplicationSettings::getInstance()->getGraphNodeOrderType();
+	std::sort(
+		m_dummyNodes.begin(),
+		m_dummyNodes.end(),
+		[order](const std::shared_ptr<DummyNode>& a, const std::shared_ptr<DummyNode>& b) {
+			return DummyNode::compareNodes(a, b, order);
+		});
+
 
 	ListLayouter::layoutMultiColumn(getView()->getViewSize(), &m_dummyNodes);
 }

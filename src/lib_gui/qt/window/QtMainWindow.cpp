@@ -47,11 +47,13 @@
 #include "View.h"
 #include "logging.h"
 #include "tracing.h"
+#include "NodeOrderType.h"
 #include "utilityApp.h"
 #include "utilityQt.h"
 #include "utilityString.h"
 
 #include <QApplication>
+#include <QActionGroup>
 #include <QDesktopServices>
 #include <QDir>
 #include <QDockWidget>
@@ -929,6 +931,30 @@ void QtMainWindow::setupViewMenu()
 
 	menu->addAction(tr("Reset Window Layout"), this, &QtMainWindow::resetWindowLayout);
 
+
+	QMenu* graphOrderMenu = new QMenu(tr("Order Graph Nodes By"), menu);
+	QActionGroup* graphOrderGroup = new QActionGroup(graphOrderMenu);
+	graphOrderGroup->setExclusive(true);
+
+	auto addGraphOrderAction = [graphOrderMenu, graphOrderGroup](const QString& text, NodeOrderType orderType) {
+		QAction* action = graphOrderMenu->addAction(text);
+		action->setCheckable(true);
+		action->setChecked(ApplicationSettings::getInstance()->getGraphNodeOrderType() == orderType);
+		graphOrderGroup->addAction(action);
+		QObject::connect(action, &QAction::triggered, [orderType]() {
+			ApplicationSettings::getInstance()->setGraphNodeOrderType(orderType);
+			ApplicationSettings::getInstance()->save();
+			MessageRefreshUI().noStyleReload().dispatch();
+		});
+	};
+
+	addGraphOrderAction(tr("Name"), NodeOrderType::BY_NAME);
+	addGraphOrderAction(tr("Lines of Code"), NodeOrderType::BY_LINES_OF_CODE);
+	addGraphOrderAction(tr("Number of Callers"), NodeOrderType::BY_CALLERS);
+	addGraphOrderAction(tr("Number of Callees"), NodeOrderType::BY_CALLEES);
+	addGraphOrderAction(tr("Total Callers + Callees"), NodeOrderType::BY_CALLERS_AND_CALLEES);
+
+	menu->addMenu(graphOrderMenu);
 	menu->addSeparator();
 
 	m_viewSeparator = menu->addSeparator();
